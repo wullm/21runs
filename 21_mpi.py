@@ -278,10 +278,6 @@ for run in range(runs):
 			#Prepare grid for power spectrum calculation
 			grid = total * 1.0
 
-			Pow = np.zeros(nk);
-			obs = np.zeros(nk);
-			avg_k  = np.zeros(nk);
-
 			#Fourier transform the grid
 			fgrid = np.fft.rfftn(grid)
 			fgrid = fgrid * (L*L*L) / (N*N*N)
@@ -292,7 +288,13 @@ for run in range(runs):
 			mult[:,:,0] = 1
 			mult[:,:,-1] = 1
 
+
+			Pow = np.zeros(nk);
+			obs = np.zeros(nk);
+			avg_k  = np.zeros(nk);
+
 			for id, k in np.ndenumerate(k_cube):
+				if (k == 0): continue
 				bin = find_nearest(kvec,k)
 				Pow[bin] += Pgrid[id] * mult[id]
 				obs[bin] += mult[id]
