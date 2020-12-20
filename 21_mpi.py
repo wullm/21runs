@@ -65,6 +65,10 @@ L = 300 #Mpc
 boxvol = L**3
 Nhalf = round(N/2+1)
 
+def find_nearest(array,value):
+    idx = (np.abs(array-value)).argmin()
+    return idx
+
 #Now, we will compute 21cm lightcones with 21cmFAST
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
