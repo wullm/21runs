@@ -1,10 +1,6 @@
 import py21cmfast as p21c
 from math import log10, sqrt
-from matplotlib import pyplot as plt
 from mpi4py import MPI
-from random import random
-
-import ctypes
 
 import numpy as np
 from scipy import interpolate as interp
@@ -13,9 +9,6 @@ import struct; #for bytes to float
 import scipy.ndimage;
 from scipy import misc;
 import os;
-
-#Library with a power spectrum tool
-lib = ctypes.cdll.LoadLibrary('/cosma5/data/durham/dc-elbe1/montep/meshpt/meshpt.so')
 
 #Function to save data cubes to the disk
 def to_bytes_file(filename, arr):
@@ -39,7 +32,7 @@ zvec = np.array([6,7,8,9,10,12,14,16,20,25]);
 logz_vec = np.log(zvec);
 
 #The wavenumbers are different per file, so we will interpolate on a finer k-grid
-logk_vec = np.log(10) * np.arange(-1.1,0.4,0.001);
+logk_vec = np.log(10) * np.arange(-1.1,0.4,0.03);
 kvec = np.exp(logk_vec);
 
 #Dimensions of the final noise array, which will be used in later interpolations
@@ -53,7 +46,7 @@ logP_arr = np.zeros(nz * nk).reshape(nz, nk);
 
 #Sample a random realization of the noise power spectrum
 df = 2 # two degrees of freedom ensures that for X=chi^2/df, mu_X = sigma_X^2 = 2.0
-chi2 = np.random.chisquare(df, size = 100) / df;
+chi2 = np.random.chisquare(df, size = nk) / df;
 
 #Load the data and create the finer 2D grid
 for i,z in enumerate(zvec):
@@ -61,59 +54,16 @@ for i,z in enumerate(zvec):
 	noise_data[z] = np.loadtxt(fname)
 	k = noise_data[z][:,0];
 	P = noise_data[z][:,2];
-	#Sample a random realization of the noise power spectrum
-	#df = 2 # two degrees of freedom ensures that for X=chi^2/df, mu_X = sigma_X^2 = 2.0
-	#chi2 = np.random.chisquare(df, size = len(P)) / df;
-	P = P * chi2[:len(P)];
-	f_interp = interp.interp1d(np.log(k), np.log(P), kind="nearest", bounds_error=False, fill_value="extrapolate")
-	logP_arr[i,:] = f_interp(logk_vec)
-	#logP_arr[i,:] = np.interp(logk_vec, np.log(k), np.log(P))
-
-#Function log P(log(k), log(z))
-logP_func = interp.interp2d(logk_vec, logz_vec, logP_arr, kind="linear")
-#logkM, logzM = np.meshgrid(logk_vec, logz_vec)
-#logP_func = interp.NearestNDInterpolator(logkM.flatten(), logzM.flatten(), logP_arr)
-#Function P(k,z)
-P_func = lambda k,z: np.exp(logP_func(np.log(k),np.log(z)))
-
-print("so far so good")
-
-
-#We will load telescope data arrays at different redshifts z
-telescope_data = {};
-
-#The power spectrum is approximately a power law in both k and z
-#We will interpolate log(P_noise) linearly on (log_z, log_k) 
-#Create a 2D array log_P_noise(z,k)
-SIZE = 39 # telescope uv grid size
-horizon_arr = np.zeros(nz * SIZE * SIZE).reshape(nz, SIZE, SIZE);
-uv_arr = np.zeros(nz * SIZE * SIZE).reshape(nz, SIZE, SIZE);
-dk_vec = np.zeros(nz)
-T2_vec = np.zeros(nz)
-
-#Load the data
-for i,z in enumerate(zvec):
-        fname1 = "telescope_data/hera_331_horizon_z"+str(z)+".txt";
-        fname2 = "telescope_data/hera_331_uv_coverage_z"+str(z)+".txt";
-        fname3 = "telescope_data/hera_331_numbers_z"+str(z)+".txt";
-        telescope_data[z] = {}
-        telescope_data[z]["horizon"] = np.loadtxt(fname1)
-        telescope_data[z]["uv_coverage"] = np.loadtxt(fname2)
-        telescope_data[z]["numbers"] = np.loadtxt(fname3)
-        horizon_arr[i,:,:] = telescope_data[z]["horizon"]
-        uv_arr[i,:,:] = telescope_data[z]["uv_coverage"]
-        dk_vec[i] = telescope_data[z]["numbers"][1]
-        T2_vec[i] = telescope_data[z]["numbers"][2]
+	#Linear interpolation to our desired k bins
+	f_interp = interp.interp1d(np.log(k), np.log(P), kind="linear", bounds_error=False, fill_value="extrapolate")
+	#Apply the random realization (chi^2 noise) to the desired k bins
+	logP_arr[i,:] = f_interp(logk_vec) * chi2;
 
 #Grid dimensions
 N = 128
 L = 300 #Mpc
 boxvol = L**3
 Nhalf = round(N/2+1)
-
-#Convert to c types for later
-cN = ctypes.c_int(N)
-cL = ctypes.c_double(L)
 
 #Now, we will compute 21cm lightcones with 21cmFAST
 comm = MPI.COMM_WORLD
@@ -127,7 +77,7 @@ f_star10_faint = log10(0.05)
 f_star10_bright = log10(0.15)
 f_star10_moderate = log10(0.07)
 
-model = "moderate"
+model = "faint"
 
 if model == "faint":
 	M_turn = M_turn_faint
@@ -141,7 +91,7 @@ else:
 
 runs = 1
 
-seeds=np.array([605816,150650,278939,573177,691674,773601,727308,828958,398521,642050,310828,471108,16985,614889,40760,814979]) 
+seeds=np.array([605816,150650,278939,573177,691674,773601,727308,828958,398521,642050,310828,471108,16985,614889,40760,814979])
 
 for run in range(runs):
 	#seed=int(round(1e6*random()));
@@ -257,116 +207,34 @@ for run in range(runs):
 		P_cube_begin = np.zeros(N*N*Nhalf).reshape(N,N,Nhalf)
 		P_cube_end = np.zeros(N*N*Nhalf).reshape(N,N,Nhalf)
 
+		#Retrieve the power spectrum at z_begin and z_end
+		log_P_begin = np.zeros(nk)
+		log_P_end = np.zeros(nk)
+		for i in range(nk):
+			log_P_begin[i] = np.interp(log_z_begin, logz_vec, logP_arr[:,i])
+			log_P_end[i] = np.interp(log_z_end, logz_vec, logP_arr[:,i])
+
 		#Interpolate the power spectrum to the grid for z_begin
 		for i in range(Nhalf):
 			thek = k_cube[:,:,i]
-			interp_P = logP_func(logk_vec, log_z_begin)
-			theLogP = np.interp(np.log(thek).flatten(), logk_vec, interp_P)
+			thek[thek > 0] = np.log(thek[thek > 0])
+			interp_P = log_P_begin
+			theLogP = np.interp(thek.flatten(), logk_vec, interp_P)
 			theP = np.exp(theLogP).reshape(N,N)
 			P_cube_begin[:,:,i] = theP
 
 		#Interpolate the power spectrum to the grid for z_end
 		for i in range(Nhalf):
 			thek = k_cube[:,:,i]
-			interp_P = logP_func(logk_vec, log_z_end)
-			theLogP = np.interp(np.log(thek).flatten(), logk_vec, interp_P)
+			thek[thek > 0] = np.log(thek[thek > 0])
+			interp_P = log_P_end
+			theLogP = np.interp(thek.flatten(), logk_vec, interp_P)
 			theP = np.exp(theLogP).reshape(N,N)
 			P_cube_end[:,:,i] = theP
-
-		observable_begin = np.zeros(N*N*Nhalf).reshape(N,N,Nhalf)
-		observable_end = np.zeros(N*N*Nhalf).reshape(N,N,Nhalf)
-
-		#Interpolate the power spectrum to the grid for z_begin
-		for i in range(Nhalf):
-			#Wavevectors in the orthogonal direction to the line of sight
-			plane_kx = KX[:,:,i]
-			plane_ky = KY[:,:,i]
-			#Quantities corresponding to the current redshift
-			plane_dk = 1.0/0.15/2.0*np.interp(log_z_begin, logz_vec, dk_vec)
-			plane_T2 = np.interp(log_z_begin, logz_vec, T2_vec)
-			plane_kz = kz[i]
-			#Interpolate the telescope data to the current redshift plane
-			index = np.interp(log_z_begin, logz_vec, np.arange(nz))
-			if (index >= nz):
-				uv_plane = uv_arr[-1]
-				horizon_plane = horizon_arr[-1]
-			else:
-				uv_plane = uv_arr[int(index)] + (uv_arr[int(index)+1] - uv_arr[int(index)]) * (index - int(index))
-				horizon_plane = horizon_arr[int(index)] + (horizon_arr[int(index)+1] - horizon_arr[int(index)]) * (index - int(index))
-			#Rescale the planes to the appropriate sizes
-			kxvec = plane_dk * (np.arange(SIZE) - int(SIZE/2));
-			kyvec = plane_dk * (np.arange(SIZE) - int(SIZE/2));
-			uv_func = interp.interp2d(kxvec, kyvec, uv_plane)
-			horizon_func = interp.interp2d(kxvec, kyvec, horizon_plane)
-			#Insert into the larger plane
-			large_uv_plane = uv_func(kx, ky)
-			large_horizon_plane = horizon_func(kx, ky)
-			#Make sure that uv coverage is conserved
-			large_uv_plane *= uv_plane.sum() / large_uv_plane.sum()
-			#Roll the arrays over to match our conventions
-			large_uv_plane = np.roll(large_uv_plane, (Nhalf, Nhalf), axis=(0,1))
-			large_horizon_plane = np.roll(large_horizon_plane, (Nhalf, Nhalf), axis=(0,1))
-			#Compute the noise temperature grid
-			large_T2_grid = np.zeros(N*N).reshape(N,N)
-			large_T2_grid[large_uv_plane > 0] = plane_T2 / large_uv_plane[large_uv_plane > 0]
-			#Construct binary grid according to whether the mode is observable
-			large_observable_grid = np.zeros(N*N).reshape(N,N)
-			large_observable_grid[large_T2_grid > 0] = 1
-			observable_begin[:,:,i] = large_observable_grid
-
-		#Interpolate the power spectrum to the grid for z_end
-		for i in range(Nhalf):
-                        #Wavevectors in the orthogonal direction to the line of sight
-                        plane_kx = KX[:,:,i]
-                        plane_ky = KY[:,:,i]
-                        #Quantities corresponding to the current redshift
-                        plane_dk = 1.0/0.15/2.0*np.interp(log_z_end, logz_vec, dk_vec)
-                        plane_T2 = np.interp(log_z_begin, logz_vec, T2_vec)
-                        plane_kz = kz[i]
-                        #Interpolate the telescope data to the current redshift plane
-                        index = np.interp(log_z_begin, logz_vec, np.arange(nz))
-                        if (index >= nz):
-                                uv_plane = uv_arr[-1]
-                                horizon_plane = horizon_arr[-1]
-                        else:
-                                uv_plane = uv_arr[int(index)] + (uv_arr[int(index)+1] - uv_arr[int(index)]) * (index - int(index))
-                                horizon_plane = horizon_arr[int(index)] + (horizon_arr[int(index)+1] - horizon_arr[int(index)]) * (index - int(index))
-                        #Rescale the planes to the appropriate sizes
-                        kxvec = plane_dk * (np.arange(SIZE) - int(SIZE/2));
-                        kyvec = plane_dk * (np.arange(SIZE) - int(SIZE/2));
-                        uv_func = interp.interp2d(kxvec, kyvec, uv_plane)
-                        horizon_func = interp.interp2d(kxvec, kyvec, horizon_plane)
-                        #Insert into the larger plane
-                        large_uv_plane = uv_func(kx, ky)
-                        large_horizon_plane = horizon_func(kx, ky)
-                        #Make sure that uv coverage is conserved
-                        large_uv_plane *= uv_plane.sum() / large_uv_plane.sum()
-                        #Roll the arrays over to match our conventions
-                        large_uv_plane = np.roll(large_uv_plane, (Nhalf, Nhalf), axis=(0,1))
-                        large_horizon_plane = np.roll(large_horizon_plane, (Nhalf, Nhalf), axis=(0,1))
-                        #Compute the noise temperature grid
-                        large_T2_grid = np.zeros(N*N).reshape(N,N)
-                        large_T2_grid[large_uv_plane > 0] = plane_T2 / large_uv_plane[large_uv_plane > 0]
-                        #Construct binary grid according to whether the mode is observable
-                        large_observable_grid = np.zeros(N*N).reshape(N,N)
-                        large_observable_grid[large_T2_grid > 0] = 1
-                        observable_end[:,:,i] = large_observable_grid
-
-		#Apply the observable windows to the noise
-		P_cube_begin *= observable_begin;
-		P_cube_end *= observable_end;
 
 		#Apply the power spectra
 		fgrf_begin = fgrf * np.sqrt(P_cube_begin)
 		fgrf_end = fgrf * np.sqrt(P_cube_end)
-
-		#Apply the observable windows to the signal
-		fsig = np.fft.rfftn(signal)
-		fsig_begin = fsig * observable_begin
-		fsig_end = fsig * observable_end
-		sig_begin = np.fft.irfftn(fsig_begin)
-		sig_end = np.fft.irfftn(fsig_end)
-		windowed_signal = np.zeros(N*N*N).reshape(N,N,N)
 
 		#Inverse Fourier transform
 		grf_begin = np.fft.irfftn(fgrf_begin) * N**3 / boxvol
@@ -381,15 +249,10 @@ for run in range(runs):
 			slice_end = grf_end[:,:,i]
 			the_slice = slice_begin + (slice_end - slice_begin)/(log_z_end - log_z_begin) * (logz - log_z_begin)
 			grf[:,:,i] = the_slice
-			
-			sig_slice_begin = sig_begin[:,:,i]
-			sig_slice_end = sig_end[:,:,i]
-			sig_slice = sig_slice_begin + (sig_slice_end - sig_slice_begin)/(log_z_end - log_z_begin) * (logz - log_z_begin)
-			windowed_signal[:,:,i] = sig_slice
 
 		for noise_lvl in noise_levels:
 			#Add the noise with the noise level
-			total = windowed_signal + grf * noise_lvl;
+			total = signal + grf * noise_lvl;
 
 			#Finally apply a sharp k-space filter on k in (0.1, 1.0)
 			ftotal = np.fft.rfftn(total)
@@ -410,25 +273,34 @@ for run in range(runs):
 
 			#Prepare grid for power spectrum calculation
 			grid = total * 1.0
-			c_grid = ctypes.c_void_p(grid.ctypes.data);
 
-			#Create bins and empty vectors for power spectrum calculation
-			bins = 30
-			k_in_bins = np.zeros(bins);
-			P_in_bins = np.zeros(bins);
-			obs_in_bins = np.zeros(bins).astype(int);
+			Pow = np.zeros(nk);
+			obs = np.zeros(nk);
+			avg_k  = np.zeros(nk);
 
-			c_bins = ctypes.c_int(bins);
-			c_kbins = ctypes.c_void_p(k_in_bins.ctypes.data);
-			c_Pbins = ctypes.c_void_p(P_in_bins.ctypes.data);
-			c_obins = ctypes.c_void_p(obs_in_bins.ctypes.data);
+			#Fourier transform the grid
+			fgrid = np.fft.rfftn(grid)
+			fgrid = fgrid * (L*L*L) / (N*N*N)
+			Pgrid = np.abs(fgrid)**2
 
-			#Compute the power spectrum
-			lib.gridPowerSpec(cN, cL, c_bins, c_grid, c_kbins, c_Pbins, c_obins);
+			#Multiplicity of modes (double count the planes with z==0 and z==N/2)
+			mult = np.ones_like(fgrid) * 2
+			mult[:,:,0] = 1
+			mult[:,:,-1] = 1
+
+			for id, k in np.ndenumerate(k_cube):
+				bin = find_nearest(kvec,k)
+				Pow[bin] += Pgrid[id] * mult[id]
+				obs[bin] += mult[id]
+				avg_k[bin] += k * mult[id]
+
+			Pow = Pow / obs
+			Pow = Pow / (L*L*L)
+			avg_k = avg_k / obs
 
 			#Convert to "dimensionless" (has dimensions mK^2) power spectrum
-			Delta2 = P_in_bins * k_in_bins**3 / (2*np.pi**2)
-			B = np.array([k_in_bins, Delta2, P_in_bins]).T
+			Delta2 = Pow * avg_k**3 / (2*np.pi**2)
+			B = np.array([avg_k, Delta2, Pow]).T
 			C = B[np.isnan(k_in_bins) == False,:]
 
 			#Store the power spectrum data
