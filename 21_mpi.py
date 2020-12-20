@@ -305,7 +305,7 @@ for run in range(runs):
 			#Convert to "dimensionless" (has dimensions mK^2) power spectrum
 			Delta2 = Pow * avg_k**3 / (2*np.pi**2)
 			B = np.array([avg_k, Delta2, Pow]).T
-			C = B[np.isnan(k_in_bins) == False,:]
+			C = B[np.isnan(avg_k) == False,:]
 
 			#Store the power spectrum data
 			PS_fname = model + "/PS_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".dat";
