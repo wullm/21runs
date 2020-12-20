@@ -220,7 +220,7 @@ for run in range(runs):
 
 		#Interpolate the power spectrum to the grid for z_begin
 		for i in range(Nhalf):
-			thek = k_cube[:,:,i]
+			thek = k_cube[:,:,i] * 1.0
 			thek[thek > 0] = np.log(thek[thek > 0])
 			interp_P = log_P_begin
 			theLogP = np.interp(thek.flatten(), logk_vec, interp_P)
@@ -229,7 +229,7 @@ for run in range(runs):
 
 		#Interpolate the power spectrum to the grid for z_end
 		for i in range(Nhalf):
-			thek = k_cube[:,:,i]
+			thek = k_cube[:,:,i] * 1.0
 			thek[thek > 0] = np.log(thek[thek > 0])
 			interp_P = log_P_end
 			theLogP = np.interp(thek.flatten(), logk_vec, interp_P)
