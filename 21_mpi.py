@@ -41,7 +41,7 @@ for i,z in enumerate(zvec):
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
 #The wavenumbers used for the power spectrum calculation
-logk_vec = np.log(10) * np.arange(-1.1,0.4,0.03);
+logk_vec = np.log(10) * np.arange(-1.1,0.4,0.05);
 kvec = np.exp(logk_vec);
 
 #Dimensions of the problem (redshift and wavenumbers)
