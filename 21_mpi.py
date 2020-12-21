@@ -195,6 +195,8 @@ for run in range(runs):
 		#Find redshifts from the limited data vector near z_begin and z_end
 		z_near_begin = zvec[zvec <= z_begin].max()
 		z_near_end = zvec[zvec >= z_end].min()
+		log_z_near_begin = np.log(z_near_begin)
+		log_z_near_end = np.log(z_near_end)
 
 		#Get the theoretical signal
 		signal = arr[:,:,index_begin:index_end];
