@@ -4,6 +4,7 @@ from mpi4py import MPI
 
 import numpy as np
 from scipy import interpolate as interp
+import h5py
 
 import struct; #for bytes to float
 import scipy.ndimage;
@@ -24,14 +25,22 @@ def to_bytes_file(filename, arr):
 		f.close();
 
 
-#We will load noise data arrays P(k) at different redshifts z
+#We will load k-coverage cubes at different z's (observing time per day per k mode)
 noise_data = {};
+temperatures = {}; #One per redshift in mK, should be divided by converage
 
 #The redshifts
 zvec = np.array([6,7,8,9,10,12,14,16,20,25]);
 logz_vec = np.log(zvec);
 
-#The wavenumbers are different per file, so we will interpolate on a finer k-grid
+#Load the data and create the finer 2D grid
+for i,z in enumerate(zvec):
+	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".txt";
+	f = h5py.File(fname, mode="r")
+	noise_data[z] = f["Coverage"]
+	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
+
+#The wavenumbers used for the power spectrum calculation
 logk_vec = np.log(10) * np.arange(-1.1,0.4,0.03);
 kvec = np.exp(logk_vec);
 
@@ -39,35 +48,21 @@ kvec = np.exp(logk_vec);
 nz = len(zvec);
 nk = len(kvec);
 
-#The power spectrum is approximately a power law in both k and z
-#We will interpolate log(P_noise) linearly on (log_z, log_k)
-#Create a 2D array log_P_noise(z,k)
-logP_arr = np.zeros(nz * nk).reshape(nz, nk);
-
-#Sample a random realization of the noise power spectrum
-df = 2 # two degrees of freedom ensures that for X=chi^2/df, mu_X = sigma_X^2 = 2.0
-chi2 = np.random.chisquare(df, size = nk) / df;
-
-#Load the data and create the finer 2D grid
-for i,z in enumerate(zvec):
-	fname = "telescope_noise/hera_331_noise_z"+str(z)+".txt";
-	noise_data[z] = np.loadtxt(fname)
-	k = noise_data[z][:,0];
-	P = noise_data[z][:,2];
-	#Linear interpolation to our desired k bins
-	f_interp = interp.interp1d(np.log(k), np.log(P), kind="linear", bounds_error=False, fill_value="extrapolate")
-	#Apply the random realization (chi^2 noise) to the desired k bins
-	logP_arr[i,:] = f_interp(logk_vec) * chi2;
-
 #Grid dimensions
 N = 128
 L = 300 #Mpc
 boxvol = L**3
 Nhalf = round(N/2+1)
 
-def find_nearest(array,value):
-    idx = (np.abs(array-value)).argmin()
-    return idx
+dk = 2*np.pi / L
+k_min = dk
+k_max = sqrt(3) * dk * N/2
+
+#The bin edges to be used for the power spectrum
+bin_edges = np.zeros(nk+1)
+bin_edges[0] = k_min
+bin_edges[-1] = k_max
+bin_edges[1:-1] = 0.5 * (kvec[1:] + kvec[:-1])
 
 #Now, we will compute 21cm lightcones with 21cmFAST
 comm = MPI.COMM_WORLD
@@ -194,6 +189,10 @@ for run in range(runs):
 		log_z_end = np.log(z_end)
 		z_central = (z_begin+z_end)/2;
 
+		#Find redshifts from the limited data vector near z_begin and z_end
+		z_near_begin = zvec[zvec <= z_begin].max()
+		z_near_end = zvec[zvec >= z_end].min()
+
 		#Get the theoretical signal
 		signal = arr[:,:,index_begin:index_end];
 
@@ -207,34 +206,13 @@ for run in range(runs):
 		w = a + b*1j
 		fgrf = w * np.sqrt(boxvol/2)
 
+		#The coverage at the bounding redshifts
+		cov_begin = noise_data[z_near_begin]
+		cov_end = noise_data[z_near_end]
+
 		#Apply the power spectrum, appropriately interpolated on (k,z)
-		P_cube_begin = np.zeros(N*N*Nhalf).reshape(N,N,Nhalf)
-		P_cube_end = np.zeros(N*N*Nhalf).reshape(N,N,Nhalf)
-
-		#Retrieve the power spectrum at z_begin and z_end
-		log_P_begin = np.zeros(nk)
-		log_P_end = np.zeros(nk)
-		for i in range(nk):
-			log_P_begin[i] = np.interp(log_z_begin, logz_vec, logP_arr[:,i])
-			log_P_end[i] = np.interp(log_z_end, logz_vec, logP_arr[:,i])
-
-		#Interpolate the power spectrum to the grid for z_begin
-		for i in range(Nhalf):
-			thek = k_cube[:,:,i] * 1.0
-			thek[thek > 0] = np.log(thek[thek > 0])
-			interp_P = log_P_begin
-			theLogP = np.interp(thek.flatten(), logk_vec, interp_P)
-			theP = np.exp(theLogP).reshape(N,N)
-			P_cube_begin[:,:,i] = theP
-
-		#Interpolate the power spectrum to the grid for z_end
-		for i in range(Nhalf):
-			thek = k_cube[:,:,i] * 1.0
-			thek[thek > 0] = np.log(thek[thek > 0])
-			interp_P = log_P_end
-			theLogP = np.interp(thek.flatten(), logk_vec, interp_P)
-			theP = np.exp(theLogP).reshape(N,N)
-			P_cube_end[:,:,i] = theP
+		P_cube_begin[cov_begin > 0]  = temperatures[z_near_begin]**2 / cov_begin[cov_begin > 0]
+		P_cube_end[cov_end > 0] = temperatures[z_near_end]**2 / cov_end[cov_end > 0]
 
 		#Apply the power spectra
 		fgrf_begin = fgrf * np.sqrt(P_cube_begin)
@@ -251,7 +229,7 @@ for run in range(runs):
 			logz = np.log(thez)
 			slice_begin = grf_begin[:,:,i]
 			slice_end = grf_end[:,:,i]
-			the_slice = slice_begin + (slice_end - slice_begin)/(log_z_end - log_z_begin) * (logz - log_z_begin)
+			the_slice = slice_begin + (slice_end - slice_begin)/(log_z_near_end - log_z_near_begin) * (logz - log_z_near_begin)
 			grf[:,:,i] = the_slice
 
 		for noise_lvl in noise_levels:
@@ -288,18 +266,15 @@ for run in range(runs):
 			mult[:,:,0] = 1
 			mult[:,:,-1] = 1
 
+			#Compute the power spectrum
+			obs = np.histogram(k_cube, bin_edges, weights = mult)
+			Pow = np.histogram(k_cube, bin_edges, weights = Pgrid * mult)
+			Pow = Pow[0] / obs[0]
+			Pow = Pow / (L*L*L)
+			avg_k = np.histogram(k_cube, bin_edges, weights = k_cube * mult)
+			avg_k = avg_k[0] / obs[0]
 
-			Pow = np.zeros(nk);
-			obs = np.zeros(nk);
-			avg_k  = np.zeros(nk);
-
-			for id, k in np.ndenumerate(k_cube):
-				if (k == 0): continue
-				bin = find_nearest(kvec,k)
-				Pow[bin] += Pgrid[id] * mult[id]
-				obs[bin] += mult[id]
-				avg_k[bin] += k * mult[id]
-
+			#Normalization
 			Pow = Pow / obs
 			Pow = Pow / (L*L*L)
 			avg_k = avg_k / obs
