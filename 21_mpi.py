@@ -35,7 +35,7 @@ logz_vec = np.log(zvec);
 
 #Load the data
 for i,z in enumerate(zvec):
-	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".txt";
+	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
 	noise_data[z] = f["Coverage"]
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
