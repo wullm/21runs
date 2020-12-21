@@ -27,7 +27,7 @@ def to_bytes_file(filename, arr):
 
 #We will load k-coverage cubes at different z's (observing time per day per k mode)
 noise_data = {};
-temperatures = {}; #One per redshift in mK, should be divided by converage
+temperatures = {}; #One per redshift in mK, should be divided by coverage
 
 #The redshifts
 zvec = np.array([6,7,8,9,10,12,14,16,20,25]);
