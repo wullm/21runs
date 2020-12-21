@@ -166,9 +166,9 @@ for run in range(runs):
 
 	#For N^3 cubes along the lightcone, calculate the wavevectors vectors
 	dk = 2*np.pi / L
-	kx = np.roll(np.arange(-Nhalf+2,Nhalf), Nhalf) * dk
-	ky = np.roll(np.arange(-Nhalf+2,Nhalf), Nhalf) * dk
-	kz = np.arange(0,Nhalf) * dk
+	kx = np.roll(np.arange(-Nhalf+1,Nhalf+1), Nhalf+1) * dk
+	ky = np.roll(np.arange(-Nhalf+1,Nhalf+1), Nhalf+1) * dk
+	kz = np.arange(0,Nhalf+1) * dk
 
 	#Calculate the N*N*Nhalf grid of wavenumbers
 	KX,KY,KZ = np.meshgrid(kx,ky,kz)
@@ -204,8 +204,8 @@ for run in range(runs):
 		#to_bytes_file(signal_box_fname, signal)
 
 		# Generate a noise cube in Fourier space
-		a = np.random.normal(0,1,N*N*Nhalf).reshape(N,N,Nhalf)
-		b = np.random.normal(0,1,N*N*Nhalf).reshape(N,N,Nhalf)
+		a = np.random.normal(0,1,(N, N, Nhalf+1))
+		b = np.random.normal(0,1,(N, N, Nhalf+1))
 		w = a + b*1j
 		fgrf = w * np.sqrt(boxvol/2)
 
@@ -214,6 +214,8 @@ for run in range(runs):
 		cov_end = noise_data[z_near_end]
 
 		#Apply the power spectrum, appropriately interpolated on (k,z)
+		P_cube_begin = np.zeros((N, N, Nhalf+1))
+		P_cube_end = np.zeros((N, N, Nhalf+1))
 		P_cube_begin[cov_begin > 0]  = temperatures[z_near_begin]**2 / cov_begin[cov_begin > 0]
 		P_cube_end[cov_end > 0] = temperatures[z_near_end]**2 / cov_end[cov_end > 0]
 
