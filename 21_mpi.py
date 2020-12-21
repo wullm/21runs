@@ -33,7 +33,7 @@ temperatures = {}; #One per redshift in mK, should be divided by converage
 zvec = np.array([6,7,8,9,10,12,14,16,20,25]);
 logz_vec = np.log(zvec);
 
-#Load the data and create the finer 2D grid
+#Load the data
 for i,z in enumerate(zvec):
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".txt";
 	f = h5py.File(fname, mode="r")
@@ -44,7 +44,7 @@ for i,z in enumerate(zvec):
 logk_vec = np.log(10) * np.arange(-1.1,0.4,0.03);
 kvec = np.exp(logk_vec);
 
-#Dimensions of the final noise array, which will be used in later interpolations
+#Dimensions of the problem (redshift and wavenumbers)
 nz = len(zvec);
 nk = len(kvec);
 
@@ -52,7 +52,7 @@ nk = len(kvec);
 N = 128
 L = 300 #Mpc
 boxvol = L**3
-Nhalf = round(N/2+1)
+Nhalf = int(N/2)
 
 dk = 2*np.pi / L
 k_min = dk
@@ -69,6 +69,7 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
+#Model parameters
 M_turn_faint = log10(0.5e9)
 M_turn_bright = log10(7.5e9)
 M_turn_moderate = log10(1.5e9)
@@ -76,8 +77,10 @@ f_star10_faint = log10(0.05)
 f_star10_bright = log10(0.15)
 f_star10_moderate = log10(0.07)
 
+#The model to be run
 model = "faint"
 
+#Apply model parameters
 if model == "faint":
 	M_turn = M_turn_faint
 	f_star10 = f_star10_faint
