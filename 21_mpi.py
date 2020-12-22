@@ -220,7 +220,7 @@ for run in range(runs):
 		a = np.random.normal(0,1,(N, N, Nhalf+1))
 		b = np.random.normal(0,1,(N, N, Nhalf+1))
 		w = a + b*1j
-		fgrf = w * np.sqrt(0.5)
+		fgrf = w * np.sqrt(boxvol/2)
 
 		#Apply the noise cube
 		noise_cube_begin = noise_data[z_near_begin]
