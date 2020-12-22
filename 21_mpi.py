@@ -244,8 +244,8 @@ for run in range(runs):
 		#Zero out modes without uv coverage in the signal
 		fsignal_begin = np.zeros_like(fsignal)
 		fsignal_end = np.zeros_like(fsignal)
-		fsignal_begin[cov_begin > 0] = fsignal[cov_begin > 0]
-		fsignal_end[cov_end > 0] = fsignal[cov_end > 0]
+		fsignal_begin[P_cube_begin > 0] = fsignal[P_cube_begin > 0]
+		fsignal_end[coP_cube_endv_end > 0] = fsignal[P_cube_end > 0]
 
 		#Inverse Fourier transform
 		signal_begin = np.fft.irfftn(fsignal_begin)
