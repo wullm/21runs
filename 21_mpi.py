@@ -309,12 +309,9 @@ for run in range(runs):
 			mult[:,:,-1] = 1
 
 			#Compute the power spectrum
-			obs = np.histogram(k_cube, bin_edges, weights = mult)
-			Pow = np.histogram(k_cube, bin_edges, weights = Pgrid * mult)
-			Pow = Pow[0] / obs[0]
-			Pow = Pow / (L*L*L)
-			avg_k = np.histogram(k_cube, bin_edges, weights = k_cube * mult)
-			avg_k = avg_k[0] / obs[0]
+			obs = np.histogram(k_cube, bin_edges, weights = mult)[0]
+			Pow = np.histogram(k_cube, bin_edges, weights = Pgrid * mult)[0]
+			avg_k = np.histogram(k_cube, bin_edges, weights = k_cube * mult)[0]
 
 			#Normalization
 			Pow = Pow / obs
