@@ -248,8 +248,8 @@ for run in range(runs):
 		fsignal_end[cov_end > 0] = fsignal[cov_end > 0]
 
 		#Inverse Fourier transform
-		signal_begin = np.fft.irfftn(fsignal_begin) * N**3 / boxvol
-		signal_end = np.fft.irfftn(fsignal_end) * N**3 / boxvol
+		signal_begin = np.fft.irfftn(fsignal_begin)
+		signal_end = np.fft.irfftn(fsignal_end)
 		signal_recovered = np.zeros(N*N*N).reshape(N,N,N);
 
 		#Interpolate between the two noise fields along the z-dimension
