@@ -39,7 +39,7 @@ logz_vec = np.log(zvec);
 for i,z in enumerate(zvec):
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
-	noise_data[z] = f["Coverage"][:]
+	noise_data[z] = f["Noise"][:]
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
 #The wavenumbers used for the power spectrum calculation
@@ -222,15 +222,9 @@ for run in range(runs):
 		w = a + b*1j
 		fgrf = w * np.sqrt(boxvol/2)
 
-		#The coverage at the bounding redshifts
-		cov_begin = noise_data[z_near_begin]
-		cov_end = noise_data[z_near_end]
-
 		#Apply the power spectrum, appropriately interpolated on (k,z)
-		P_cube_begin = np.zeros((N, N, Nhalf+1))
-		P_cube_end = np.zeros((N, N, Nhalf+1))
-		P_cube_begin[cov_begin > 0]  = temperatures[z_near_begin]**2 / cov_begin[cov_begin > 0]
-		P_cube_end[cov_end > 0] = temperatures[z_near_end]**2 / cov_end[cov_end > 0]
+		P_cube_begin = noise_data[z_near_begin]
+		P_cube_end = noise_data[z_near_end]
 
 		#Apply the power spectra
 		fgrf_begin = fgrf * np.sqrt(P_cube_begin)
