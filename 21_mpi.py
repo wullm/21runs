@@ -37,7 +37,7 @@ logz_vec = np.log(zvec);
 for i,z in enumerate(zvec):
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
-	noise_data[z] = f["Coverage"]
+	noise_data[z] = f["Coverage"][:]
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
 #The wavenumbers used for the power spectrum calculation
@@ -166,11 +166,13 @@ for run in range(runs):
 
 	#For N^3 cubes along the lightcone, calculate the wavevectors vectors
 	dk = 2*np.pi / L
-	kx = np.roll(np.arange(-Nhalf+1,Nhalf+1), Nhalf+1) * dk
-	ky = np.roll(np.arange(-Nhalf+1,Nhalf+1), Nhalf+1) * dk
-	kz = np.arange(0,Nhalf+1) * dk
+	modes = np.arange(N)
+	modes[modes > N/2] -= N
+	kx = modes * dk
+	ky = modes * dk
+	kz = modes[:Nhalf+1] * dk
 
-	#Calculate the N*N*Nhalf grid of wavenumbers
+	#Calculate the N*N*(N/2+1) grid of wavenumbers
 	KX,KY,KZ = np.meshgrid(kx,ky,kz)
 	K2 = KX**2 + KY**2 + KZ**2
 	k_cube = np.sqrt(K2)
@@ -205,6 +207,9 @@ for run in range(runs):
 		#signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
 		#to_bytes_file(signal_box_fname, signal)
 
+		#Fourier transform the signal
+		fsignal = np.fft.rfftn(signal)
+
 		# Generate a noise cube in Fourier space
 		a = np.random.normal(0,1,(N, N, Nhalf+1))
 		b = np.random.normal(0,1,(N, N, Nhalf+1))
@@ -230,6 +235,17 @@ for run in range(runs):
 		grf_end = np.fft.irfftn(fgrf_end) * N**3 / boxvol
 		grf = np.zeros(N*N*N).reshape(N,N,N);
 
+		#Zero out modes without uv coverage in the signal
+		fsignal_begin = np.zeros_like(fsignal)
+		fsignal_end = np.zeros_like(fsignal)
+		fsignal_begin[cov_begin > 0] = fsignal[cov_begin > 0]
+		fsignal_end[cov_end > 0] = fsignal[cov_end > 0]
+
+		#Inverse Fourier transform
+		signal_begin = np.fft.irfftn(fsignal_begin) * N**3 / boxvol
+		signal_end = np.fft.irfftn(fsignal_end) * N**3 / boxvol
+		signal_recovered = np.zeros(N*N*N).reshape(N,N,N);
+
 		#Interpolate between the two noise fields along the z-dimension
 		for i in range(N):
 			thez = z[index_begin + i]
@@ -239,14 +255,23 @@ for run in range(runs):
 			the_slice = slice_begin + (slice_end - slice_begin)/(log_z_near_end - log_z_near_begin) * (logz - log_z_near_begin)
 			grf[:,:,i] = the_slice
 
+		#Interpolate between the two received signal fields along the z-dimension
+		for i in range(N):
+			thez = z[index_begin + i]
+			logz = np.log(thez)
+			slice_begin = signal_begin[:,:,i]
+			slice_end = signal_end[:,:,i]
+			the_slice = slice_begin + (slice_end - slice_begin)/(log_z_near_end - log_z_near_begin) * (logz - log_z_near_begin)
+			signal_recovered[:,:,i] = the_slice
+
 		for noise_lvl in noise_levels:
 			#Add the noise with the noise level
-			total = signal + grf * noise_lvl;
+			total = signal_recovered + grf * noise_lvl;
 
 			#Finally apply a sharp k-space filter on k in (0.1, 1.0)
 			ftotal = np.fft.rfftn(total)
-			ftotal[k_cube > 1.0] = 0.0
-			ftotal[k_cube < 0.1] = 0.0
+			# ftotal[k_cube > 1.0] = 0.0
+			# ftotal[k_cube < 0.1] = 0.0
 			#And apply a Gaussian filter with smoothing radius of 1 Mpc
 			#ftotal = ftotal * np.exp(-k_cube * k_cube)
 			total = np.fft.irfftn(ftotal)
