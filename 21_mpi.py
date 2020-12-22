@@ -239,7 +239,7 @@ for run in range(runs):
 		fsignal_begin = np.zeros_like(fsignal)
 		fsignal_end = np.zeros_like(fsignal)
 		fsignal_begin[P_cube_begin > 0] = fsignal[P_cube_begin > 0]
-		fsignal_end[coP_cube_endv_end > 0] = fsignal[P_cube_end > 0]
+		fsignal_end[P_cube_endv_end > 0] = fsignal[P_cube_end > 0]
 
 		#Inverse Fourier transform
 		signal_begin = np.fft.irfftn(fsignal_begin)
