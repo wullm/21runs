@@ -220,15 +220,15 @@ for run in range(runs):
 		a = np.random.normal(0,1,(N, N, Nhalf+1))
 		b = np.random.normal(0,1,(N, N, Nhalf+1))
 		w = a + b*1j
-		fgrf = w * np.sqrt(boxvol/2)
+		fgrf = w * np.sqrt(0.5)
 
-		#Apply the power spectrum, appropriately interpolated on (k,z)
-		P_cube_begin = noise_data[z_near_begin]
-		P_cube_end = noise_data[z_near_end]
+		#Apply the noise cube
+		noise_cube_begin = noise_data[z_near_begin]
+		noise_cube_end = noise_data[z_near_end]
 
 		#Apply the power spectra
-		fgrf_begin = fgrf * np.sqrt(P_cube_begin)
-		fgrf_end = fgrf * np.sqrt(P_cube_end)
+		fgrf_begin = fgrf * np.sqrt(noise_cube_begin)
+		fgrf_end = fgrf * np.sqrt(noise_cube_end)
 
 		#Inverse Fourier transform
 		grf_begin = np.fft.irfftn(fgrf_begin) * N**3 / boxvol
@@ -238,8 +238,8 @@ for run in range(runs):
 		#Zero out modes without uv coverage in the signal
 		fsignal_begin = np.zeros_like(fsignal)
 		fsignal_end = np.zeros_like(fsignal)
-		fsignal_begin[P_cube_begin > 0] = fsignal[P_cube_begin > 0]
-		fsignal_end[P_cube_endv_end > 0] = fsignal[P_cube_end > 0]
+		fsignal_begin[noise_cube_begin > 0] = fsignal[noise_cube_begin > 0]
+		fsignal_end[noise_cube_end > 0] = fsignal[noise_cube_end > 0]
 
 		#Inverse Fourier transform
 		signal_begin = np.fft.irfftn(fsignal_begin)
