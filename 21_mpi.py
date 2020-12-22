@@ -226,6 +226,12 @@ for run in range(runs):
 		P_cube_begin = noise_data[z_near_begin]
 		P_cube_end = noise_data[z_near_end]
 
+		#Zer out high noise outrigger pixels
+		mean_begin = P_cube_begin[P_cube_begin > 0].mean()
+		mean_end = P_cube_end[P_cube_end > 0].mean()
+		P_cube_begin[P_cube_begin > mean_begin * 0.2] = 0
+		P_cube_end[P_cube_end > mean_end * 0.2] = 0
+
 		#Apply the power spectra
 		fgrf_begin = fgrf * np.sqrt(P_cube_begin)
 		fgrf_end = fgrf * np.sqrt(P_cube_end)
