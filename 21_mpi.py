@@ -32,7 +32,7 @@ noise_data = {};
 temperatures = {}; #One per redshift in mK, should be divided by coverage
 
 #The redshifts
-zvec = np.array([6,7,8,9,10,12,14,16,20,25]);
+zvec = np.array([6,7,8,9,10,12,14,16,20,25,30]);
 logz_vec = np.log(zvec);
 
 #Load the data
