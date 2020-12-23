@@ -209,9 +209,13 @@ for run in range(runs):
 		signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
 		to_bytes_file(signal_box_fname, signal)
 
-		#Store an image of a 2D slice of the 3D cube
-		image_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
+		#Store images of a 2D slice of the 3D cube
+		image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
 		plt.imsave(image_fname, signal[:,:,32], cmap="magma")
+		image_fname = model + "/dT_xy_thick_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
+		plt.imsave(image_fname, signal[:,:,22:42].mean(axis=2), cmap="magma")
+		image_fname = model + "/dT_yz_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
+		plt.imsave(image_fname, signal[32], cmap="magma")
 
 		#Fourier transform the signal
 		fsignal = np.fft.rfftn(signal)
@@ -283,9 +287,14 @@ for run in range(runs):
 			box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
 			to_bytes_file(box_fname, total)
 
-			#Store an image of a 2D slice of the 3D cube
-			image_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
+			#Store images of a 2D slice of the 3D cube
+			image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
 			plt.imsave(image_fname, total[:,:,32], cmap="magma")
+			image_fname = model + "/dT_xy_thick_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
+			plt.imsave(image_fname, total[:,:,22:42].mean(axis=2), cmap="magma")
+			image_fname = model + "/dT_yz_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
+			plt.imsave(image_fname, total[32], cmap="magma")
+
 
 			print("Stored grid for slice ", j, " and noise level ", noise_lvl);
 
