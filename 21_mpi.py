@@ -39,7 +39,7 @@ logz_vec = np.log(zvec);
 for i,z in enumerate(zvec):
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
-	noise_data[z] = f["Noise"][:]
+	noise_data[z] = f["Noise_Horizon"][:]
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
 #The wavenumbers used for the power spectrum calculation
@@ -270,8 +270,8 @@ for run in range(runs):
 
 			#Finally apply a sharp k-space filter on k in (0.1, 1.0)
 			ftotal = np.fft.rfftn(total)
-			# ftotal[k_cube > 1.0] = 0.0
-			# ftotal[k_cube < 0.1] = 0.0
+			ftotal[k_cube > 1.0] = 0.0
+			ftotal[k_cube < 0.1] = 0.0
 			#And apply a Gaussian filter with smoothing radius of 1 Mpc
 			#ftotal = ftotal * np.exp(-k_cube * k_cube)
 			total = np.fft.irfftn(ftotal)
@@ -311,6 +311,11 @@ for run in range(runs):
 			Pow = Pow / obs
 			Pow = Pow / (L*L*L)
 			avg_k = avg_k / obs
+
+			#Convert to real numbers if Im(x) < eps
+			Pow = np.real_if_close(Pow)
+			avg_k = np.real_if_close(avg_k)
+			obs = np.real_if_close(obs)
 
 			#Convert to "dimensionless" (has dimensions mK^2) power spectrum
 			Delta2 = Pow * avg_k**3 / (2*np.pi**2)
