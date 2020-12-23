@@ -43,7 +43,7 @@ for i,z in enumerate(zvec):
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
 #The wavenumbers used for the power spectrum calculation
-logk_vec = np.log(10) * np.arange(-1.1,0.4,0.05);
+logk_vec = np.log(10) * np.arange(-1.1,0.4,0.1);
 kvec = np.exp(logk_vec);
 
 #Dimensions of the problem (redshift and wavenumbers)
@@ -267,6 +267,57 @@ for run in range(runs):
 			slice_end = signal_end[:,:,i]
 			the_slice = slice_begin + (slice_end - slice_begin)/(log_z_near_end - log_z_near_begin) * (logz - log_z_near_begin)
 			signal_recovered[:,:,i] = the_slice
+
+		#Compute the pure noise power spectrum (for noise_lvl 1.0)
+
+		#Store the pure noise box
+		box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.box";
+		to_bytes_file(box_fname, grf)
+
+		#Store images of a 2D slice of the pure noise cube
+		image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.png";
+		plt.imsave(image_fname, grf[:,:,32], cmap="magma")
+		image_fname = model + "/dT_xy_thick_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.png";
+		plt.imsave(image_fname, grf[:,:,22:42].mean(axis=2), cmap="magma")
+		image_fname = model + "/dT_yz_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.png";
+		plt.imsave(image_fname, grf[32], cmap="magma")
+
+		#Prepare grid for power spectrum calculation
+		grid = grf * 1.0
+
+		#Fourier transform the grid
+		fgrid = np.fft.rfftn(grid)
+		fgrid = fgrid * (L*L*L) / (N*N*N)
+		Pgrid = np.abs(fgrid)**2
+
+		#Multiplicity of modes (double count the planes with z==0 and z==N/2)
+		mult = np.ones_like(fgrid) * 2
+		mult[:,:,0] = 1
+		mult[:,:,-1] = 1
+
+		#Compute the power spectrum
+		obs = np.histogram(k_cube, bin_edges, weights = mult)[0]
+		Pow = np.histogram(k_cube, bin_edges, weights = Pgrid * mult)[0]
+		avg_k = np.histogram(k_cube, bin_edges, weights = k_cube * mult)[0]
+
+		#Normalization
+		Pow = Pow / obs
+		Pow = Pow / (L*L*L)
+		avg_k = avg_k / obs
+
+		#Convert to real numbers if Im(x) < eps
+		Pow = np.real_if_close(Pow)
+		avg_k = np.real_if_close(avg_k)
+		obs = np.real_if_close(obs)
+
+		#Convert to "dimensionless" (has dimensions mK^2) power spectrum
+		Delta2 = Pow * avg_k**3 / (2*np.pi**2)
+		B = np.array([avg_k, Delta2, Pow]).T
+		C = B[np.isnan(avg_k) == False,:]
+
+		#Store the power spectrum data
+		PS_fname = model + "/PS_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.dat";
+		np.savetxt(PS_fname, C, header="Power spectrum for brightness temperature (pure noise) at z="+str(z_central)+"\nWavenumbers k are in 1/Mpc, Delta^2(k) is in mK^2, P(k) is in mK^2 * Mpc^3\nThe power spectra are related by Delta^2(k) = P(k) * k^3 / (2*pi^2)\n\nk Delta^2_noise(k) P_noise(k)");
 
 		for noise_lvl in noise_levels:
 			#Add the noise with the noise level
