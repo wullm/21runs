@@ -206,8 +206,8 @@ for run in range(runs):
 		signal = arr[:,:,index_begin:index_end];
 
 		#Store the signal box without noise realization
-		#signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
-		#to_bytes_file(signal_box_fname, signal)
+		signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
+		to_bytes_file(signal_box_fname, signal)
 
 		#Store an image of a 2D slice of the 3D cube
 		image_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
