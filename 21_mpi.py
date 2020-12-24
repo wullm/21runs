@@ -241,13 +241,6 @@ for run in range(runs):
 		noise_cube_begin = noise_data[z_near_begin]
 		noise_cube_end = noise_data[z_near_end]
 
-		#Reduplicate redundant planes
-		for i in range(Nhalf+1):
-			if (noise_cube_begin[:,:,i].sum() == 0):
-				noise_cube_begin[:,:,i] = noise_cube_begin[:,:,i-1] * 1.0
-			if (noise_cube_end[:,:,i].sum() == 0):
-				noise_cube_end[:,:,i] = noise_cube_end[:,:,i-1] * 1.0
-
 		#Apply the power spectra
 		fgrf_begin = fgrf * np.sqrt(noise_cube_begin)
 		fgrf_end = fgrf * np.sqrt(noise_cube_end)
@@ -262,6 +255,13 @@ for run in range(runs):
 		fsignal_end = np.zeros_like(fsignal)
 		fsignal_begin[noise_cube_begin > 0] = fsignal[noise_cube_begin > 0]
 		fsignal_end[noise_cube_end > 0] = fsignal[noise_cube_end > 0]
+
+		#Reduplicate redundant planes
+		for i in range(Nhalf+1):
+			if (fsignal_begin[:,:,i].sum() == 0):
+				fsignal_begin[:,:,i] = fsignal_begin[:,:,i-1] * 1.0
+			if (fsignal_end[:,:,i].sum() == 0):
+				fsignal_end[:,:,i] = fsignal_end[:,:,i-1] * 1.0
 
 		#Inverse Fourier transform
 		signal_begin = np.fft.irfftn(fsignal_begin)
