@@ -45,7 +45,6 @@ def to_bytes_file(filename, arr):
 
 #We will load k-coverage cubes at different z's (observing time per day per k mode)
 noise_data = {};
-temperatures = {}; #One per redshift in mK, should be divided by coverage
 
 #The redshifts
 zvec = np.array([6,7,8,9,10,12,14,16,20,25,30]);
@@ -56,7 +55,6 @@ for i,z in enumerate(zvec):
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
 	noise_data[z] = f["Noise_Horizon"][:]
-	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
 #Number of redshifts
 nz = len(zvec);
