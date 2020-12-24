@@ -299,8 +299,8 @@ for run in range(runs):
 		mult[:,:,-1] = 1
 
 		#Compute the bin edges at the central redshift
-		delta_k = dk_deta(z)*(1./bandwidth) * h # 1/Mpc
-		kvec = n.arange(delta_k,k_max,delta_k) # 1/Mpc
+		delta_k = dk_deta(z) * (1./bandwidth) * h # 1/Mpc
+		kvec = np.arange(delta_k, k_max, delta_k) # 1/Mpc
 		bin_edges = np.zeros(len(kvec)+1)
 		bin_edges[0] = k_min
 		bin_edges[-1] = k_max
