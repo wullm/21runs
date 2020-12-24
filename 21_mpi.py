@@ -256,6 +256,13 @@ for run in range(runs):
 		fsignal_begin[noise_cube_begin > 0] = fsignal[noise_cube_begin > 0]
 		fsignal_end[noise_cube_end > 0] = fsignal[noise_cube_end > 0]
 
+		#Reduplicate redundant planes
+		for i in range(Nhalf+1):
+		    if (fsignal_begin[:,:,i].sum() == 0):
+		        fsignal_begin[:,:,i] = fsignal_begin[:,:,i-1] * 1.0
+			if (fsignal_end[:,:,i].sum() == 0):
+				fsignal_end[:,:,i] = fsignal_end[:,:,i-1] * 1.0
+
 		#Inverse Fourier transform
 		signal_begin = np.fft.irfftn(fsignal_begin)
 		signal_end = np.fft.irfftn(fsignal_end)
