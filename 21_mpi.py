@@ -258,8 +258,8 @@ for run in range(runs):
 
 		#Reduplicate redundant planes
 		for i in range(Nhalf+1):
-			if (fsignal_begin[:,:,i].sum() == 0):
-				fsignal_begin[:,:,i] = fsignal_begin[:,:,i-1] * 1.0
+		    if (fsignal_begin[:,:,i].sum() == 0):
+		        fsignal_begin[:,:,i] = fsignal_begin[:,:,i-1] * 1.0
 			if (fsignal_end[:,:,i].sum() == 0):
 				fsignal_end[:,:,i] = fsignal_end[:,:,i-1] * 1.0
 
