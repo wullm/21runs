@@ -13,6 +13,22 @@ import scipy.ndimage;
 from scipy import misc;
 import os;
 
+#Hubble constant
+h = 0.68
+
+#Multiply by this to convert a bandwidth in GHz to a line of sight distance in Mpc/h at redshift z
+def dL_df(z, omega_m=0.31):
+    '''[h^-1 Mpc]/GHz, from Furlanetto et al. (2006)'''
+    return (1.7 / 0.1) * ((1+z) / 10.)**.5 * (omega_m/0.15)**-0.5 * 1e3
+
+#Multiply by this to convert eta (FT of freq.; in 1/GHz) to line of sight k mode in h/Mpc at redshift z
+def dk_deta(z):
+    '''2pi * [h Mpc^-1] / [GHz^-1]'''
+    return 2*np.pi / dL_df(z)
+
+#The fiducial bandwidth in GHz
+bandwidth = 0.008
+
 #Function to save data cubes to the disk
 def to_bytes_file(filename, arr):
 	with open(filename, "wb") as f:
@@ -42,13 +58,8 @@ for i,z in enumerate(zvec):
 	noise_data[z] = f["Noise_Horizon"][:]
 	temperatures[z] = f["Header"].attrs["Temperature (mK)"]
 
-#The wavenumbers used for the power spectrum calculation
-logk_vec = np.log(10) * np.arange(-1.1,0.4,0.1);
-kvec = np.exp(logk_vec);
-
-#Dimensions of the problem (redshift and wavenumbers)
+#Number of redshifts
 nz = len(zvec);
-nk = len(kvec);
 
 #Grid dimensions
 N = 128
@@ -59,12 +70,6 @@ Nhalf = int(N/2)
 dk = 2*np.pi / L
 k_min = dk
 k_max = sqrt(3) * dk * N/2
-
-#The bin edges to be used for the power spectrum
-bin_edges = np.zeros(nk+1)
-bin_edges[0] = k_min
-bin_edges[-1] = k_max
-bin_edges[1:-1] = 0.5 * (kvec[1:] + kvec[:-1])
 
 #Now, we will compute 21cm lightcones with 21cmFAST
 comm = MPI.COMM_WORLD
@@ -115,7 +120,7 @@ for run in range(runs):
 
 	cosmo_pars = p21c.CosmoParams({
 		"SIGMA_8": 0.81,
-		"hlittle": 0.68,
+		"hlittle": h,
 		"OMm": 0.31,
 		"OMb": 0.048,
 		"POWER_INDEX": 0.97
@@ -294,6 +299,14 @@ for run in range(runs):
 		mult = np.ones_like(fgrid) * 2
 		mult[:,:,0] = 1
 		mult[:,:,-1] = 1
+
+		#Compute the bin edges at the central redshift
+		delta_k = dk_deta(z)*(1./bandwidth) * h # 1/Mpc
+		kvec = n.arange(delta_k,k_max,delta_k) # 1/Mpc
+		bin_edges = np.zeros(len(kvec)+1)
+		bin_edges[0] = k_min
+		bin_edges[-1] = k_max
+		bin_edges[1:-1] = 0.5 * (kvec[1:] + kvec[:-1])
 
 		#Compute the power spectrum
 		obs = np.histogram(k_cube, bin_edges, weights = mult)[0]
