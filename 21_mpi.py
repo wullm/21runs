@@ -16,6 +16,10 @@ import os;
 #Hubble constant
 h = 0.68
 
+#####################
+#Two methods from 21cmsense by J Pober used for bandwith -> wavenumber calculation
+#####################
+
 #Multiply by this to convert a bandwidth in GHz to a line of sight distance in Mpc/h at redshift z
 def dL_df(z, omega_m=0.31):
     '''[h^-1 Mpc]/GHz, from Furlanetto et al. (2006)'''
@@ -25,6 +29,10 @@ def dL_df(z, omega_m=0.31):
 def dk_deta(z):
     '''2pi * [h Mpc^-1] / [GHz^-1]'''
     return 2*np.pi / dL_df(z)
+
+#####################
+#End of methods from 21cmsense
+#####################
 
 #The fiducial bandwidth in GHz
 bandwidth = 0.008
