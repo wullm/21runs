@@ -223,8 +223,10 @@ for run in range(runs):
 		small_signal = zoom(signal, zoom = 0.5, order = 1)
 
 		#Store the signal box without noise realization
-		signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
+		signal_box_fname = model + "/small_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
 		to_bytes_file(signal_box_fname, small_signal)
+		signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
+		to_bytes_file(signal_box_fname, signal)
 
 		#Store images of a 2D slice of the 3D cube
 		image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
@@ -291,8 +293,10 @@ for run in range(runs):
 		small_grf = zoom(grf, zoom = 0.5, order = 1)
 
 		#Store the pure noise box
-		box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.box";
+		box_fname = model + "/small_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.box";
 		to_bytes_file(box_fname, small_grf)
+		box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.box";
+		to_bytes_file(box_fname, grf)
 
 		#Store images of a 2D slice of the pure noise cube
 		image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.png";
@@ -368,8 +372,10 @@ for run in range(runs):
 			small_total = zoom(total, zoom = 0.5, order = 1)
 
 			#Store the box with noise
-			box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
+			box_fname = model + "/small_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
 			to_bytes_file(box_fname, small_total)
+			box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
+			to_bytes_file(box_fname, total)
 
 			#Store images of a 2D slice of the 3D cube
 			image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
