@@ -357,19 +357,24 @@ for run in range(runs):
 		for noise_lvl in noise_levels:
 			#Add the noise with the noise level
 			total = signal_recovered + grf * noise_lvl;
-
-			#Finally apply a sharp k-space filter on k in (0.1, 1.0)
+			#Fourier transform the total of noise and signal
 			ftotal = np.fft.rfftn(total)
+
+			#Apply a sharp k-space filter on k in (0.1, 1.0)
 			# ftotal[k_cube > 1.0] = 0.0
 			# ftotal[k_cube < 0.1] = 0.0
-			#And apply a Gaussian filter with smoothing radius R
-			delta_nu = 1.5 / 1000 # GHz
-			R_smooth = delta_nu * dL_df(z_central) / h / (2 * np.pi)
-			ftotal = ftotal * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
+
 			#Also compute a whitened version of the grid
 			ftotal_white = np.zeros_like(ftotal)
 			nonzero = np.abs(ftotal) > 0
 			ftotal_white[nonzero] = ftotal[nonzero] / np.abs(ftotal[nonzero])
+
+			#And apply a Gaussian filter with smoothing radius R
+			delta_nu = 1.5 / 1000 # GHz
+			R_smooth = delta_nu * dL_df(z_central) / h / (2 * np.pi)
+			ftotal = ftotal * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
+			ftotal_white = ftotal_white * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
+
 			#Inverse Fourier transform
 			total = np.fft.irfftn(ftotal)
 			total_white = np.fft.irfftn(ftotal_white)
