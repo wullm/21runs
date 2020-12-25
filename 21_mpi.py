@@ -344,10 +344,10 @@ for run in range(runs):
 
 			#Finally apply a sharp k-space filter on k in (0.1, 1.0)
 			ftotal = np.fft.rfftn(total)
-			ftotal[k_cube > 1.0] = 0.0
+			# ftotal[k_cube > 1.0] = 0.0
 			# ftotal[k_cube < 0.1] = 0.0
-			#And apply a Gaussian filter with smoothing radius of 1 Mpc
-			#ftotal = ftotal * np.exp(-k_cube * k_cube)
+			#And apply a Gaussian filter with smoothing radius of 1 voxel
+			ftotal = ftotal * np.exp(- (L/N)**2 * k_cube * k_cube)
 			total = np.fft.irfftn(ftotal)
 
 			#Discard invalid points (rare)
