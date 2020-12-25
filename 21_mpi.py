@@ -363,10 +363,17 @@ for run in range(runs):
 			delta_nu = 1.5 / 1000 # GHz
 			R_smooth = delta_nu * dL_df(z_central) / h / (2 * np.pi)
 			ftotal = ftotal * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
+			#Also compute a whitened version of the grid
+			ftotal_white = np.zeros_like(ftotal)
+			nonzero = np.abs(ftotal) > 0
+			ftotal_white[nonzero] = ftotal[nonzero] / np.abs(ftotal[nonzero])
+			#Inverse Fourier transform
 			total = np.fft.irfftn(ftotal)
+			total_white = np.fft.irfftn(ftotal_white)
 
 			#Discard invalid points (rare)
 			total[np.isnan(total)] = 0.
+			total_white[np.isnan(total_white)] = 0.
 
 			#Create a smaller copy
 			small_total = zoom(total, zoom = 0.5, order = 1)
@@ -385,6 +392,22 @@ for run in range(runs):
 			image_fname = model + "/dT_yz_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
 			plt.imsave(image_fname, total[32], cmap="magma")
 
+			#Create a smaller copy of the whitened grid
+			small_total_white = zoom(total_white, zoom = 0.5, order = 1)
+
+			#Store the box with noise
+			box_fname = model + "/small_white_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
+			to_bytes_file(box_fname, small_total_white)
+			box_fname = model + "/white_dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
+			to_bytes_file(box_fname, total_white)
+
+			#Store images of a 2D slice of the 3D cube
+			image_fname = model + "/white_dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
+			plt.imsave(image_fname, total_white[:,:,32], cmap="magma")
+			image_fname = model + "/white_dT_xy_thick_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
+			plt.imsave(image_fname, total_white[:,:,22:42].mean(axis=2), cmap="magma")
+			image_fname = model + "/white_dT_yz_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
+			plt.imsave(image_fname, total_white[32], cmap="magma")
 
 			print("Stored grid for slice ", j, " and noise level ", noise_lvl);
 
