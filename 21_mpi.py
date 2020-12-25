@@ -6,6 +6,8 @@ import numpy as np
 from scipy import interpolate as interp
 import h5py
 
+from scipy.ndimage import zoom
+
 from matplotlib import pyplot as plt
 
 import struct; #for bytes to float
@@ -191,7 +193,8 @@ for run in range(runs):
 	k_cube = np.sqrt(K2)
 
 	#We will generate noise grids, linearly scaled by the noise level between (0,2)
-	noise_levels = np.arange(0,2.1,0.1);
+	# noise_levels = np.arange(0,2.1,0.1);
+	noise_levels = np.array([0.1, 0.5, 1.0, 2.0])
 	#noise_levels = np.array([3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0]);
 
 	#Export all the cubic slices
@@ -216,9 +219,12 @@ for run in range(runs):
 		#Get the theoretical signal
 		signal = arr[:,:,index_begin:index_end];
 
+		#Create a smaller copy
+		small_signal = zoom(signal, zoom = 0.5, order = 1)
+
 		#Store the signal box without noise realization
 		signal_box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.box";
-		to_bytes_file(signal_box_fname, signal)
+		to_bytes_file(signal_box_fname, small_signal)
 
 		#Store images of a 2D slice of the 3D cube
 		image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noiseless.png";
@@ -281,9 +287,12 @@ for run in range(runs):
 
 		#Compute the pure noise power spectrum (for noise_lvl 1.0)
 
+		#Create a smaller copy
+		small_grf = zoom(grf, zoom = 0.5, order = 1)
+
 		#Store the pure noise box
 		box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.box";
-		to_bytes_file(box_fname, grf)
+		to_bytes_file(box_fname, small_grf)
 
 		#Store images of a 2D slice of the pure noise cube
 		image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_pure_noise.png";
@@ -346,16 +355,21 @@ for run in range(runs):
 			ftotal = np.fft.rfftn(total)
 			# ftotal[k_cube > 1.0] = 0.0
 			# ftotal[k_cube < 0.1] = 0.0
-			#And apply a Gaussian filter with smoothing radius of 1 voxel
-			ftotal = ftotal * np.exp(- (L/N)**2 * k_cube * k_cube)
+			#And apply a Gaussian filter with smoothing radius R
+			delta_nu = 1.5 / 1000 # GHz
+			R_smooth = delta_nu * dL_df(z_central) / h / (2 * np.pi)
+			ftotal = ftotal * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
 			total = np.fft.irfftn(ftotal)
 
 			#Discard invalid points (rare)
 			total[np.isnan(total)] = 0.
 
+			#Create a smaller copy
+			small_total = zoom(total, zoom = 0.5, order = 1)
+
 			#Store the box with noise
 			box_fname = model + "/dT_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".box";
-			to_bytes_file(box_fname, total)
+			to_bytes_file(box_fname, small_total)
 
 			#Store images of a 2D slice of the 3D cube
 			image_fname = model + "/dT_xy_" + model + "_" + str(rank) + "_" + str(seed) + "_slice_" + str(j) + "_noise_" + str(round(noise_lvl,1)) + ".png";
