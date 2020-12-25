@@ -197,7 +197,7 @@ for run in range(runs):
 
 	#We will generate noise grids, linearly scaled by the noise level between (0,2)
 	# noise_levels = np.arange(0,2.1,0.1);
-	noise_levels = np.array([0.1, 0.3, 1.0, 3.0, 10.0])
+	noise_levels = np.array([0.0, 0.1, 0.3, 1.0, 3.0, 10.0])
 	#noise_levels = np.array([3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0]);
 
 	#Export all the cubic slices
