@@ -374,6 +374,8 @@ for run in range(runs):
 			total = np.fft.irfftn(ftotal)
 			total_white = np.fft.irfftn(ftotal_white)
 
+			print("Smooting radius R = ", R_smooth, "at z = ", z_central)
+
 			#Discard invalid points (rare)
 			total[np.isnan(total)] = 0.
 			total_white[np.isnan(total_white)] = 0.
