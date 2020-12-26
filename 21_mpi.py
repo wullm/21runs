@@ -425,9 +425,9 @@ def export_PS(grid, N, L, fname, z):
 	C = B[np.isnan(avg_k) == False,:]
 
 	#Store the power spectrum data
-	header_str = "Power spectrum for brightness temperature at z="+str(z) \
-				 "\nWavenumbers k are in 1/Mpc, Delta^2(k) is in mK^2, P(k) " \
-				 "is in mK^2 * Mpc^3\nThe power spectra are related by " \
-				 "Delta^2(k) = P(k) * k^3 / (2*pi^2)\n\nk Delta^2_noise(k)" \
-				 " P_noise(k)"
-	np.savetxt(fname, C, header=header_str);
+	headr = """Power spectrum for brightness temperature at z=""" + str(z) + """
+			\nWavenumbers k are in 1/Mpc, Delta^2(k) is in mK^2, P(k)
+			is in mK^2 * Mpc^3\nThe power spectra are related by
+			Delta^2(k) = P(k) * k^3 / (2*pi^2)\n\nk Delta^2_noise(k)
+			P_noise(k)"""
+	np.savetxt(fname, C, header=headr);
