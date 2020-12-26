@@ -1,0 +1,3 @@
+[submodule "21cmSense"]
+	path = 21cmSense
+	url = https://github.com/wullm/21cmSense
