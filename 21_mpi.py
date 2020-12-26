@@ -48,6 +48,78 @@ def to_bytes_file(filename, arr, width):
 			f.write(four_bytes);
 		f.close();
 
+#Prepare filename using a standard format
+def generate_fname(dir, title, model, rank, seed, slice_num, pre_str, ext):
+	fname = dir + "/" + title + "_" + model + "_" + str(rank) + "_" \
+			+ str(seed) + "_slice_" + str(slice_num) + "_" + pre_str + ext
+	return(fname)
+
+#Compute the power spectrum and store it as a text file
+def export_PS(grid, N, L, fname, z):
+	#Half the grid length rounded down
+	Nhalf = int(N/2)
+
+	#Calculate the wavevectors
+	dk = 2*np.pi / L
+	modes = np.arange(N)
+	modes[modes > N/2] -= N
+	kx = modes * dk
+	ky = modes * dk
+	kz = modes[:Nhalf+1] * dk
+
+	#Calculate the N*N*(N/2+1) grid of wavenumbers
+	KX,KY,KZ = np.meshgrid(kx,ky,kz)
+	K2 = KX**2 + KY**2 + KZ**2
+	k_cube = np.sqrt(K2)
+
+	#Make a copy of the grid so as not to destroy the input
+	grid_cp = grid * 1.0
+
+	#Fourier transform the grid
+	fgrid = np.fft.rfftn(grid_cp)
+	fgrid = fgrid * (L*L*L) / (N*N*N)
+	Pgrid = np.abs(fgrid)**2
+
+	#Multiplicity of modes (double count all planes but z==0 and z==N/2)
+	mult = np.ones_like(fgrid) * 2
+	mult[:,:,0] = 1
+	mult[:,:,-1] = 1
+
+	#Compute the bin edges at the given redshift
+	delta_k = dk_deta(z) * (1./bandwidth) * h # 1/Mpc
+	kvec = np.arange(delta_k, k_max, delta_k) # 1/Mpc
+	bin_edges = np.zeros(len(kvec)+1)
+	bin_edges[0] = k_min
+	bin_edges[-1] = k_max
+	bin_edges[1:-1] = 0.5 * (kvec[1:] + kvec[:-1])
+
+	#Compute the power spectrum
+	obs = np.histogram(k_cube, bin_edges, weights = mult)[0]
+	Pow = np.histogram(k_cube, bin_edges, weights = Pgrid * mult)[0]
+	avg_k = np.histogram(k_cube, bin_edges, weights = k_cube * mult)[0]
+
+	#Normalization
+	Pow = Pow / obs
+	Pow = Pow / (L*L*L)
+	avg_k = avg_k / obs
+
+	#Convert to real numbers if Im(x) < eps
+	Pow = np.real_if_close(Pow)
+	avg_k = np.real_if_close(avg_k)
+	obs = np.real_if_close(obs)
+
+	#Convert to "dimensionless" (has dimensions mK^2) power spectrum
+	Delta2 = Pow * avg_k**3 / (2*np.pi**2)
+	B = np.array([avg_k, Delta2, Pow]).T
+	C = B[np.isnan(avg_k) == False,:]
+
+	#Store the power spectrum data
+	headr = """Power spectrum for brightness temperature at z=""" + str(z) + """
+			\nWavenumbers k are in 1/Mpc, Delta^2(k) is in mK^2, P(k)
+			is in mK^2 * Mpc^3\nThe power spectra are related by
+			Delta^2(k) = P(k) * k^3 / (2*pi^2)\n\nk Delta^2_noise(k)
+			P_noise(k)"""
+	np.savetxt(fname, C, header=headr);
 
 #We will load k-coverage cubes at different z's (observing time per day per k mode)
 noise_data = {};
@@ -358,76 +430,3 @@ for j in range(slices):
 		PS_fname = generate_fname(outdir, "PS", model, rank, seed, j, nsigstr, ".dat")
 		export_PS(total, N, L, PS_fname, z_central)
 		print("Done with power spectrum for slice ", j, " and noise level ", noise_lvl);
-
-#Prepare filename using a standard format
-def generate_fname(dir, title, model, rank, seed, slice_num, pre_str, ext):
-	fname = dir + "/" + title + "_" + model + "_" + str(rank) + "_" \
-			+ str(seed) + "_slice_" + str(slice_num) + "_" + pre_str + ext
-	return(fname)
-
-#Compute the power spectrum and store it as a text file
-def export_PS(grid, N, L, fname, z):
-	#Half the grid length rounded down
-	Nhalf = int(N/2)
-
-	#Calculate the wavevectors
-	dk = 2*np.pi / L
-	modes = np.arange(N)
-	modes[modes > N/2] -= N
-	kx = modes * dk
-	ky = modes * dk
-	kz = modes[:Nhalf+1] * dk
-
-	#Calculate the N*N*(N/2+1) grid of wavenumbers
-	KX,KY,KZ = np.meshgrid(kx,ky,kz)
-	K2 = KX**2 + KY**2 + KZ**2
-	k_cube = np.sqrt(K2)
-
-	#Make a copy of the grid so as not to destroy the input
-	grid_cp = grid * 1.0
-
-	#Fourier transform the grid
-	fgrid = np.fft.rfftn(grid_cp)
-	fgrid = fgrid * (L*L*L) / (N*N*N)
-	Pgrid = np.abs(fgrid)**2
-
-	#Multiplicity of modes (double count all planes but z==0 and z==N/2)
-	mult = np.ones_like(fgrid) * 2
-	mult[:,:,0] = 1
-	mult[:,:,-1] = 1
-
-	#Compute the bin edges at the given redshift
-	delta_k = dk_deta(z) * (1./bandwidth) * h # 1/Mpc
-	kvec = np.arange(delta_k, k_max, delta_k) # 1/Mpc
-	bin_edges = np.zeros(len(kvec)+1)
-	bin_edges[0] = k_min
-	bin_edges[-1] = k_max
-	bin_edges[1:-1] = 0.5 * (kvec[1:] + kvec[:-1])
-
-	#Compute the power spectrum
-	obs = np.histogram(k_cube, bin_edges, weights = mult)[0]
-	Pow = np.histogram(k_cube, bin_edges, weights = Pgrid * mult)[0]
-	avg_k = np.histogram(k_cube, bin_edges, weights = k_cube * mult)[0]
-
-	#Normalization
-	Pow = Pow / obs
-	Pow = Pow / (L*L*L)
-	avg_k = avg_k / obs
-
-	#Convert to real numbers if Im(x) < eps
-	Pow = np.real_if_close(Pow)
-	avg_k = np.real_if_close(avg_k)
-	obs = np.real_if_close(obs)
-
-	#Convert to "dimensionless" (has dimensions mK^2) power spectrum
-	Delta2 = Pow * avg_k**3 / (2*np.pi**2)
-	B = np.array([avg_k, Delta2, Pow]).T
-	C = B[np.isnan(avg_k) == False,:]
-
-	#Store the power spectrum data
-	headr = """Power spectrum for brightness temperature at z=""" + str(z) + """
-			\nWavenumbers k are in 1/Mpc, Delta^2(k) is in mK^2, P(k)
-			is in mK^2 * Mpc^3\nThe power spectra are related by
-			Delta^2(k) = P(k) * k^3 / (2*pi^2)\n\nk Delta^2_noise(k)
-			P_noise(k)"""
-	np.savetxt(fname, C, header=headr);
