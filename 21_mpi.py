@@ -194,7 +194,7 @@ K2 = KX**2 + KY**2 + KZ**2
 k_cube = np.sqrt(K2)
 
 #We will generate noise grids, linearly scaled by the noise level
-noise_levels = np.array([0.0, 0.1, 0.3, 1.0, 3.0, 10.0, 1.0])
+noise_levels = np.array([0.0, 0.1, sqrt(0.1), 1.0, sqrt(10.0), 10.0, 1.0])
 signal_levels = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0])
 
 #Export all the cubic slices
