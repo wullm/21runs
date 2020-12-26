@@ -430,4 +430,4 @@ def export_PS(grid, N, L, fname, z):
 				 "is in mK^2 * Mpc^3\nThe power spectra are related by " \
 				 "Delta^2(k) = P(k) * k^3 / (2*pi^2)\n\nk Delta^2_noise(k)" \
 				 " P_noise(k)"
-	np.savetxt(fname, C, header=);
+	np.savetxt(fname, C, header=header_str);
