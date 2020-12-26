@@ -54,5 +54,5 @@ for j in slices:
 		box_fname = generate_fname(outdir, "small", model, rank, seed, j, nsigstr, ".box")
 		topology_fname = generate_fname(outdir, "small_topology", model, rank, seed, j, nsigstr, ".dat")
 		os.system("/cosma5/data/durham/dc-elbe1/FieldFiltrations/FieldFiltrations/triangulate " + box_fname + " > " + topology_fname);
-		print("Done with topology for slice ", j, " and noise level ", noise_lvl);
+		print("Done with topology for slice ", j, " and noise level ", noise_lvl, " and signal level", signal_lvl);
 		time.sleep(1)
