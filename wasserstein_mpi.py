@@ -64,11 +64,12 @@ for pair in pairs[rank::size]:
 		for noise_lvl, signal_lvl in zip(noise_levels, signal_levels):
 			#Format the signal and noise levels into a string
 			nsigstr = "noise_%.1f_signal_%.1f" % (noise_lvl, signal_lvl)
+			nsig_only = "%.1f %.1f" % (noise_lvl, signal_lvl)
 
 			#Calculate the topological distance for each dimension
 			for dim in range(3):
 				topo_fname1 = generate_fname(outdir1, "small_topology", model1, rank1, seed1, j, nsigstr, "_betti_" + str(dim) +".dat")
 				topo_fname2 = generate_fname(outdir2, "small_topology", model2, rank2, seed2, j, nsigstr, "_betti_" + str(dim) +".dat")
-				os.system("echo -n " seed1 + " " + seed2 + " " + j + " " + noise_lvl + " " + signal_lvl + " " + dim + " >> " + outfile)
+				os.system("echo -n " + str(seed1) + " " + str(seed2) + " " + str(j) + " " + nsig_only + " " + str(dim) + " >> " + outfile)
 				os.system("/cosma5/data/durham/dc-elbe1/hera/hera/geom_matching/wasserstein/wasserstein_dist " + topo_fname1 + " " + topo_fname2 " >> " + outfile);
 				time.sleep(0.5)
