@@ -27,9 +27,9 @@ outdir2 = "faint"
 identical = (model1 == model2) and (outdir1 == outdir2)
 
 #The slices and noise levels to be run
-slices = np.array([0])
-noise_levels = np.array([0.0])
-signal_levels = np.array([1.0])
+slices = np.arange(0,11)
+noise_levels = np.array([0.0, 0.1, sqrt(0.1), 1.0, sqrt(10.0), 10.0, 1.0])
+signal_levels = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0])
 
 #The seeds to be run
 seeds=np.array([605816, 150650, 278939, 573177, 691674, 773601, 727308, 828958,
