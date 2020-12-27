@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from os import listdir
+from math import sqrt
 from os.path import isfile, join
 
 #Prepare filename using a standard format
@@ -53,7 +54,7 @@ for rank in range(16):
 			out_fname_0 = generate_fname(outdir, "small_topology", model, rank, seed, j, nsigstr, "_betti_0.dat")
 			out_fname_1 = generate_fname(outdir, "small_topology", model, rank, seed, j, nsigstr, "_betti_1.dat")
 			out_fname_2 = generate_fname(outdir, "small_topology", model, rank, seed, j, nsigstr, "_betti_2.dat")
-			
+
 			#Export the data per dimension
 			np.savetxt(out_fname_0, b0)
 			np.savetxt(out_fname_1, b1)
