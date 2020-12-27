@@ -47,7 +47,7 @@ for rank1 in ranks:
 pairs = np.array(pairs)
 
 #Each rank will output distances to a separate file
-outfile = "topo_distances_" + outdir1 + "_" + outdir2 + "_" + str(rank) + ".dat"
+outfile = "distances/distances_" + outdir1 + "_" + outdir2 + "_" + str(rank) + ".dat"
 
 #Run over all pairs assigned to this rank
 for pair in pairs[rank::size]:
