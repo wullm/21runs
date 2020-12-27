@@ -33,6 +33,9 @@ for rank in range(16):
 			#Generate input topology filename
 			topo_fname = generate_fname(outdir, "small_topology", model, rank, seed, j, nsigstr, ".dat")
 
+			print("Working on seed ", seed, ": slice ", j, " and noise level ",
+			 		noise_lvl, " and signal level", signal_lvl);
+
 			#Load the data
 			X = np.loadtxt(topo_fname, skiprows=2)
 			#Extract the dimension column
