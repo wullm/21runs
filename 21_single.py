@@ -177,5 +177,5 @@ for j in range(slices):
 	log_z_begin = np.log(z_begin)
 	log_z_end = np.log(z_end)
 	z_central = (z_begin+z_end)/2;
-
-    print(j, z_begin, z_central, z_end)
+	
+	print(j, z_begin, z_central, z_end)
