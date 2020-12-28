@@ -414,8 +414,8 @@ for j in range(slices):
 		to_bytes_file(box_fname, total, N)
 
 		#Store image of a 2D slice of the 3D cube
-		image_fname = generate_fname(outdir, "xy_thick", model, rank, seed, j, nsigstr, ".png")
-		plt.imsave(image_fname, total[:,:,22:42].mean(axis=2), cmap="magma")
+		# image_fname = generate_fname(outdir, "xy_thick", model, rank, seed, j, nsigstr, ".png")
+		# plt.imsave(image_fname, total[:,:,22:42].mean(axis=2), cmap="magma")
 
 		#Create a smaller copy of the whitened grid
 		small_total_white = zoom(total_white, zoom = 0.5, order = 1)
