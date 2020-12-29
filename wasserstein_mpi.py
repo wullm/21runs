@@ -80,8 +80,13 @@ for rank1 in ranks:
 
 pairs = np.array(pairs)
 
+#Make working directories
+workdir = "workdir_" + str(rank)
+os.system("mkdir -p " + workdir)
+os.chdir(workdir)
+
 #Each rank will output distances to a separate file
-outfile = "distances/distances_" + outdir1 + "_" + outdir2 + "_" + str(rank) + ".dat"
+outfile = "../distances/distances_" + outdir1 + "_" + outdir2 + "_" + str(rank) + ".dat"
 
 #Run over all pairs assigned to this rank
 for pair in pairs[rank::size]:
@@ -93,8 +98,8 @@ for pair in pairs[rank::size]:
 	print("Doing pair", seed1, seed2)
 
 	#We will need to unpack the relevant files from the tars
-	tar_name1 = outdir1 + "_topo.tar"
-	tar_name2 = outdir2 + "_topo.tar"
+	tar_name1 = "../" + outdir1 + "_topo.tar"
+	tar_name2 = "../" + outdir2 + "_topo.tar"
 	for j in slices:
 		for noise_lvl, signal_lvl in zip(noise_levels, signal_levels):
 			#Format the signal and noise levels into a string
@@ -132,3 +137,9 @@ for pair in pairs[rank::size]:
 
 			#Clean up the main files
 			os.system("rm " + topo_fname1 + " " + topo_fname2)
+
+#Return to the original directory
+os.chdir("..")
+
+#Remove the working directory
+os.system("rm -r " + workdir)
