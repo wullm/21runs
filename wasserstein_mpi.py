@@ -104,6 +104,9 @@ for pair in pairs[rank::size]:
 			#Format the corresponding filenames
 			topo_fname1 = generate_fname(outdir1, "small_topology", model1, rank1 % 16, seed1, j, nsigstr, ".dat")
 			topo_fname2 = generate_fname(outdir2, "small_topology", model2, rank2 % 16, seed2, j, nsigstr, ".dat")
+			#Print status
+			print("Extracting " + topo_fname1 + " from " + tar_name1)
+			print("Extracting " + topo_fname2 + " from " + tar_name2)
 			#Extract those files
 			os.system("tar -xvf " + tar_name1 + " " + topo_fname1)
 			os.system("tar -xvf " + tar_name2 + " " + topo_fname2)
