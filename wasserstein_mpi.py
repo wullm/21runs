@@ -129,7 +129,7 @@ for pair in pairs[rank::size]:
 				cols = "topo " + str(seed1) + " " + str(seed2) + " " + str(j) + " " + nsig_only + " " + str(dim) + " "
 				os.system("echo -n \"" + cols + "\">> " + outfile)
 				#Compute the distance and output it
-				os.system("/cosma5/data/durham/dc-elbe1/hera/hera/geom_matching/wasserstein/wasserstein_dist " + topo_fname1 + " " + topo_fname2 + " >> " + outfile);
+				os.system("/cosma5/data/durham/dc-elbe1/hera/hera/geom_matching/wasserstein/wasserstein_dist " + fname1 + " " + fname2 + " >> " + outfile);
 				time.sleep(0.5)
 
 				#Clean up the files
