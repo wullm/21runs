@@ -93,8 +93,8 @@ for pair in pairs[rank::size]:
 	print("Doing pair", seed1, seed2)
 
 	#We will need to unpack the relevant files from the tars
-	tar_name1 = outdir1 + "_topo.tar.gz"
-	tar_name2 = outdir2 + "_topo.tar.gz"
+	tar_name1 = outdir1 + "_topo.tar"
+	tar_name2 = outdir2 + "_topo.tar"
 	for j in slices:
 		for noise_lvl, signal_lvl in zip(noise_levels, signal_levels):
 			#Format the signal and noise levels into a string
