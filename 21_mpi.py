@@ -180,10 +180,10 @@ else:
 	f_star10 = f_star10_bright
 
 #Each rank will work on a different random seed
-# seeds=np.array([605816, 150650, 278939, 573177, 691674, 773601, 727308, 828958,
-# 				398521, 642050, 310828, 471108, 16985, 614889, 40760, 814979])
-seeds=np.array([359948, 830947, 694085, 785293, 862157, 213451, 382758, 775384,
-                414375, 229164, 200363, 763514, 790364, 25155, 540756, 357669])
+seeds=np.array([605816, 150650, 278939, 573177, 691674, 773601, 727308, 828958,
+				398521, 642050, 310828, 471108, 16985, 614889, 40760, 814979])
+# seeds=np.array([359948, 830947, 694085, 785293, 862157, 213451, 382758, 775384,
+#				 414375, 229164, 200363, 763514, 790364, 25155, 540756, 357669])
 seed = seeds[rank];
 print("Running seed", seed, rank, size);
 
@@ -404,8 +404,15 @@ for j in range(slices):
 		total[np.isnan(total)] = 0.
 		total_white[np.isnan(total_white)] = 0.
 
-		#Create a smaller copy
+		#Create smaller copies
 		small_total = zoom(total, zoom = 0.5, order = 1)
+		small_total_white = zoom(total_white, zoom = 0.5, order = 1)
+
+		#Discard the DC mode
+		total -= total.mean()
+		total_white -= total_white.mean()
+		small_total -= small_total.mean()
+		small_total_white -= small_total_white.mean()
 
 		#Store the box with noise
 		box_fname = generate_fname(outdir, "small", model, rank, seed, j, nsigstr, ".box")
@@ -416,9 +423,6 @@ for j in range(slices):
 		#Store image of a 2D slice of the 3D cube
 		# image_fname = generate_fname(outdir, "xy_thick", model, rank, seed, j, nsigstr, ".png")
 		# plt.imsave(image_fname, total[:,:,22:42].mean(axis=2), cmap="magma")
-
-		#Create a smaller copy of the whitened grid
-		small_total_white = zoom(total_white, zoom = 0.5, order = 1)
 
 		#Store the box with noise
 		box_fname = generate_fname(outdir, "small_white", model, rank, seed, j, nsigstr, ".box")
