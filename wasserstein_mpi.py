@@ -63,11 +63,11 @@ noise_levels = np.array([0.0, 0.1, sqrt(0.1), 1.0, sqrt(10.0), 10.0, 1.0])
 signal_levels = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0])
 
 #The seeds to be run
-seeds1=np.array([605816, 150650, 278939, 573177, 691674, 773601, 727308, 828958,
+seeds=np.array([605816, 150650, 278939, 573177, 691674, 773601, 727308, 828958,
 				 398521, 642050, 310828, 471108, 16985, 614889, 40760, 814979])
-seeds2=np.array([359948, 830947, 694085, 785293, 862157, 213451, 382758, 775384,
-                 414375, 229164, 200363, 763514, 790364, 25155, 540756, 357669])
-seeds = np.append(seeds1,seeds2)
+# seeds2=np.array([359948, 830947, 694085, 785293, 862157, 213451, 382758, 775384,
+#                  414375, 229164, 200363, 763514, 790364, 25155, 540756, 357669])
+# seeds = np.append(seeds1,seeds2)
 ranks = range(len(seeds))
 
 #Make a list of all unique pairs
@@ -129,7 +129,7 @@ for pair in pairs[rank::size]:
 				cols = "topo " + str(seed1) + " " + str(seed2) + " " + str(j) + " " + nsig_only + " " + str(dim) + " "
 				os.system("echo -n \"" + cols + "\">> " + outfile)
 				#Compute the distance and output it
-				os.system("/cosma5/data/durham/dc-elbe1/hera/hera/geom_matching/wasserstein/wasserstein_dist " + fname1 + " " + fname2 + " >> " + outfile);
+				os.system("/cosma5/data/durham/dc-elbe1/hera/hera/geom_matching/wasserstein/wasserstein_dist -p 2 -q 2 --initial-epsilon 120 " + fname1 + " " + fname2 + " >> " + outfile);
 				time.sleep(0.5)
 
 				#Clean up the files
