@@ -130,10 +130,16 @@ logz_vec = np.log(zvec);
 nz = len(zvec);
 
 #Load the telescope data
-for i,z in enumerate(zvec):
+for z in zvec:
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
 	noise_data[z] = f["Noise_Horizon"][:]
+
+#For the aggressive noise strategy, cut the 25% noisiest modes
+cut = 0.75
+for z in zvec:
+    cut_lvl = np.quantile(noise_data[z][noise_data[z]>0], cut)
+    noise_data[z][noise_data[z] > cut_lvl] = 0.0
 
 #Grid dimensions
 N = 128
