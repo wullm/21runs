@@ -415,10 +415,10 @@ for j in range(slices):
 		small_total_white = zoom(total_white, zoom = 0.5, order = 1)
 
 		#Discard the DC mode
-		total -= total.mean()
-		total_white -= total_white.mean()
-		small_total -= small_total.mean()
-		small_total_white -= small_total_white.mean()
+		total -= total.mean(axis=2, keepdims=True)
+		total_white -= total_white.mean(axis=2, keepdims=True)
+		small_total -= small_total.mean(axis=2, keepdims=True)
+		small_total_white -= small_total_white.mean(axis=2, keepdims=True)
 
 		#Store the box with noise
 		box_fname = generate_fname(outdir, "small", model, rank, seed, j, nsigstr, ".box")
