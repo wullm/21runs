@@ -20,13 +20,13 @@ h = 0.68
 
 #Multiply by this to convert a bandwidth in GHz to a line of sight distance in Mpc/h at redshift z
 def dL_df(z, omega_m=0.31):
-    '''[h^-1 Mpc]/GHz, from Furlanetto et al. (2006)'''
-    return (1.7 / 0.1) * ((1+z) / 10.)**.5 * (omega_m/0.15)**-0.5 * 1e3
+	'''[h^-1 Mpc]/GHz, from Furlanetto et al. (2006)'''
+	return (1.7 / 0.1) * ((1+z) / 10.)**.5 * (omega_m/0.15)**-0.5 * 1e3
 
 #Multiply by this to convert eta (FT of freq.; in 1/GHz) to line of sight k mode in h/Mpc at redshift z
 def dk_deta(z):
-    '''2pi * [h Mpc^-1] / [GHz^-1]'''
-    return 2*np.pi / dL_df(z)
+	'''2pi * [h Mpc^-1] / [GHz^-1]'''
+	return 2*np.pi / dL_df(z)
 
 #####################
 #End of methods from 21cmsense
@@ -124,22 +124,24 @@ def export_PS(grid, N, L, fname, z):
 #We will load k-coverage cubes at different z's (observing time per day per k mode)
 noise_data = {};
 
+#The cut-off for the noise level at different z's
+noise_cutoff = {};
+cut = 0.8 # 80th percentile
+
 #The redshifts for which we have telescope data
 zvec = np.array([6,7,8,9,10,12,14,16,20,25,30]);
 logz_vec = np.log(zvec);
 nz = len(zvec);
 
-#Load the telescope data
 for z in zvec:
+	#Load the telescope data
 	fname = "telescope_data/hera_350_k_coverage_z"+str(z)+".h5";
 	f = h5py.File(fname, mode="r")
 	noise_data[z] = f["Noise_Horizon"][:]
-
-#For the aggressive noise strategy, cut the 25% noisiest modes
-cut = 0.75
-for z in zvec:
-    cut_lvl = np.quantile(noise_data[z][noise_data[z]>0], cut)
-    noise_data[z][noise_data[z] > cut_lvl] = 0.0
+	#Compute the cut-off based on the noise cube without foreground avoidance
+	full_noise = f["Noise"][:]
+	noise_cutoff[z] = np.quantile(full_noise[full_noise > 0], cut)
+	print("Noise cutoff at z = " + str(z) + " is " + str(noise_cutoff[z]))
 
 #Grid dimensions
 N = 128
@@ -323,64 +325,59 @@ for j in range(slices):
 	w = a + b*1j
 	fgrf = w * np.sqrt(boxvol/2)
 
-	#Retrieve noise levels from the telescope data at the bounding redshifts
-	noise_cube_begin = noise_data[z_near_begin]
-	noise_cube_end = noise_data[z_near_end]
-
-	#Apply the power spectra
-	fgrf_begin = fgrf * np.sqrt(noise_cube_begin)
-	fgrf_end = fgrf * np.sqrt(noise_cube_end)
-
-	#Inverse Fourier transform (normalization needed)
-	grf_begin = np.fft.irfftn(fgrf_begin) * N**3 / boxvol
-	grf_end = np.fft.irfftn(fgrf_end) * N**3 / boxvol
-	grf = np.zeros(N*N*N).reshape(N,N,N);
-
-	#Zero out modes without uv coverage in the signal (these have zero noise)
-	fsignal_begin = np.zeros_like(fsignal)
-	fsignal_end = np.zeros_like(fsignal)
-	fsignal_begin[noise_cube_begin > 0] = fsignal[noise_cube_begin > 0]
-	fsignal_end[noise_cube_end > 0] = fsignal[noise_cube_end > 0]
-
-	#Inverse Fourier transform (normalization not needed here)
-	signal_begin = np.fft.irfftn(fsignal_begin)
-	signal_end = np.fft.irfftn(fsignal_end)
-	signal_recovered = np.zeros(N*N*N).reshape(N,N,N);
-
-	#Interpolate between the two noise fields along the z-dimension
-	for i in range(N):
-		z_of_2d_slice = z[index_begin + i]
-		logz = np.log(z_of_2d_slice)
-		slice_begin = grf_begin[:,:,i]
-		slice_end = grf_end[:,:,i]
-		x = (logz - log_z_near_begin) / (log_z_near_end - log_z_near_begin)
-		the_slice = slice_begin + (slice_end - slice_begin) * x
-		grf[:,:,i] = the_slice
-
-	#Interpolate between the two received signal fields along the z-dimension
-	for i in range(N):
-		z_of_2d_slice = z[index_begin + i]
-		logz = np.log(z_of_2d_slice)
-		slice_begin = signal_begin[:,:,i]
-		slice_end = signal_end[:,:,i]
-		x = (logz - log_z_near_begin) / (log_z_near_end - log_z_near_begin)
-		the_slice = slice_begin + (slice_end - slice_begin) * x
-		signal_recovered[:,:,i] = the_slice
-
-	#Create a smaller copy of the pure noise field
-	small_grf = zoom(grf, zoom = 0.5, order = 1)
-
-	#Store the pure noise box
-	box_fname = generate_fname(outdir, "small", model, rank, seed, j, "pure_noise", ".box")
-	to_bytes_file(box_fname, small_grf, N_small)
-	box_fname = generate_fname(outdir, "full", model, rank, seed, j, "pure_noise", ".box")
-	to_bytes_file(box_fname, grf, N)
-
-	#Compute and store the power spectrum for the pure noise field
-	PS_fname = generate_fname(outdir, "PS", model, rank, seed, j, "pure_noise", ".dat")
-	export_PS(grf, N, L, PS_fname, z_central)
+	#Retrieve the cut-off levels
+	noise_cutoff_begin = noise_cutoff[z_near_begin]
+	noise_cutoff_end = noise_cutoff[z_near_end]
 
 	for noise_lvl, signal_lvl in zip(noise_levels, signal_levels):
+		#Retrieve noise cubes from the telescope data at the bounding redshifts
+		noise_cube_begin = noise_data[z_near_begin]
+		noise_cube_end = noise_data[z_near_end]
+
+		#Apply the cutoffs
+		noise_cube_begin[noise_cube_begin * noise_lvl > noise_cutoff_begin] = 0
+		noise_cube_end[noise_cube_end * noise_lvl > noise_cutoff_end] = 0
+
+		#Apply the power spectra
+		fgrf_begin = fgrf * np.sqrt(noise_cube_begin)
+		fgrf_end = fgrf * np.sqrt(noise_cube_end)
+
+		#Inverse Fourier transform (normalization needed)
+		grf_begin = np.fft.irfftn(fgrf_begin) * N**3 / boxvol
+		grf_end = np.fft.irfftn(fgrf_end) * N**3 / boxvol
+		grf = np.zeros(N*N*N).reshape(N,N,N);
+
+		#Zero out modes without uv coverage in the signal (these have zero noise)
+		fsignal_begin = np.zeros_like(fsignal)
+		fsignal_end = np.zeros_like(fsignal)
+		fsignal_begin[noise_cube_begin > 0] = fsignal[noise_cube_begin > 0]
+		fsignal_end[noise_cube_end > 0] = fsignal[noise_cube_end > 0]
+
+		#Inverse Fourier transform (normalization not needed here)
+		signal_begin = np.fft.irfftn(fsignal_begin)
+		signal_end = np.fft.irfftn(fsignal_end)
+		signal_recovered = np.zeros(N*N*N).reshape(N,N,N);
+
+		#Interpolate between the two noise fields along the z-dimension
+		for i in range(N):
+			z_of_2d_slice = z[index_begin + i]
+			logz = np.log(z_of_2d_slice)
+			slice_begin = grf_begin[:,:,i]
+			slice_end = grf_end[:,:,i]
+			x = (logz - log_z_near_begin) / (log_z_near_end - log_z_near_begin)
+			the_slice = slice_begin + (slice_end - slice_begin) * x
+			grf[:,:,i] = the_slice
+
+		#Interpolate between the two received signal fields along the z-dimension
+		for i in range(N):
+			z_of_2d_slice = z[index_begin + i]
+			logz = np.log(z_of_2d_slice)
+			slice_begin = signal_begin[:,:,i]
+			slice_end = signal_end[:,:,i]
+			x = (logz - log_z_near_begin) / (log_z_near_end - log_z_near_begin)
+			the_slice = slice_begin + (slice_end - slice_begin) * x
+			signal_recovered[:,:,i] = the_slice
+
 		#Format the signal and noise levels into a string
 		nsigstr = "noise_%.1f_signal_%.1f" % (noise_lvl, signal_lvl)
 
@@ -395,8 +392,8 @@ for j in range(slices):
 		ftotal_white[nonzero] = ftotal[nonzero] / np.abs(ftotal[nonzero])
 
 		#And apply a Gaussian filter with smoothing radius R
-		delta_nu = 1.5 / 1000 # GHz
-		R_smooth = delta_nu * dL_df(z_central) / h / (2 * np.pi) # Mpc
+		delta_nu = 240.0 / 1e6 # GHz
+		R_smooth = delta_nu * 2.0 * np.pi / dk_deta(z_central) / h # Mpc
 		ftotal = ftotal * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
 		ftotal_white = ftotal_white * np.exp(- 0.5 * R_smooth * R_smooth * k_cube * k_cube)
 
@@ -414,7 +411,7 @@ for j in range(slices):
 		small_total = zoom(total, zoom = 0.5, order = 1)
 		small_total_white = zoom(total_white, zoom = 0.5, order = 1)
 
-		#Discard the DC mode
+		#Demean each redshift slice
 		total -= total.mean(axis=2, keepdims=True)
 		total_white -= total_white.mean(axis=2, keepdims=True)
 		small_total -= small_total.mean(axis=2, keepdims=True)
@@ -430,7 +427,7 @@ for j in range(slices):
 		# image_fname = generate_fname(outdir, "xy_thick", model, rank, seed, j, nsigstr, ".png")
 		# plt.imsave(image_fname, total[:,:,22:42].mean(axis=2), cmap="magma")
 
-		#Store the box with noise
+		#Store the box with noise (whitened)
 		box_fname = generate_fname(outdir, "small_white", model, rank, seed, j, nsigstr, ".box")
 		to_bytes_file(box_fname, small_total_white, N_small)
 		box_fname = generate_fname(outdir, "full_white", model, rank, seed, j, nsigstr, ".box")
