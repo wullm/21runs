@@ -34,12 +34,6 @@ print("Running seed", seed, rank, size);
 
 #Run over all the cubic slices
 for j in slices:
-	#Do the pure noise field
-	box_fname = generate_fname(outdir, "small", model, rank, seed, j, "pure_noise", ".box")
-	topology_fname = generate_fname(outdir, "small_topology", model, rank, seed, j, "pure_noise", ".dat")
-	os.system("/cosma5/data/durham/dc-elbe1/FieldFiltrations/FieldFiltrations/triangulate " + box_fname + " > " + topology_fname);
-	print("Done with pure noise topology", j, rank, size)
-	time.sleep(1)
 
 	#Do the noiseless pure signal field
 	box_fname = generate_fname(outdir, "small", model, rank, seed, j, "noiseless", ".box")
