@@ -41,6 +41,13 @@ for j in slices:
 	print("Done with pure noise topology", j, rank, size)
 	time.sleep(1)
 
+	#Do the noiseless pure signal field
+	box_fname = generate_fname(outdir, "small", model, rank, seed, j, "noiseless", ".box")
+	topology_fname = generate_fname(outdir, "small_topology", model, rank, seed, j, "noiseless", ".dat")
+	os.system("/cosma5/data/durham/dc-elbe1/FieldFiltrations/FieldFiltrations/triangulate " + box_fname + " > " + topology_fname);
+	print("Done with pure signal topology", j, rank, size)
+	time.sleep(1)
+
 	for noise_lvl, signal_lvl in zip(noise_levels, signal_levels):
 		#Format the signal and noise levels into a string
 		nsigstr = "noise_%.1f_signal_%.1f" % (noise_lvl, signal_lvl)
