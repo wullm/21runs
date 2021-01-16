@@ -54,8 +54,8 @@ def generate_fname(dir, title, model, rank, seed, slice_num, pre_str, ext):
 			+ str(seed) + "_slice_" + str(slice_num) + "_" + pre_str + ext
 	return(fname)
 
-#Compute the power spectrum and store it as a text file
-def export_PS(grid, N, L, fname, z):
+#Compute the power spectrum
+def compute_PS(grid, N, L, z, mask):
 	#Half the grid length rounded down
 	Nhalf = int(N/2)
 
@@ -85,6 +85,10 @@ def export_PS(grid, N, L, fname, z):
 	mult[:,:,0] = 1
 	mult[:,:,-1] = 1
 
+	#Get rid of modes excluded by the mask
+	eps = np.finfo(float).eps
+	mult[np.abs(mask) < eps] = 0
+
 	#Compute the bin edges at the given redshift
 	delta_k = dk_deta(z) * (1./bandwidth) * h # 1/Mpc
 	kvec = np.arange(delta_k, k_max, delta_k) # 1/Mpc
@@ -112,6 +116,53 @@ def export_PS(grid, N, L, fname, z):
 	Delta2 = Pow * avg_k**3 / (2*np.pi**2)
 	B = np.array([avg_k, Delta2, Pow]).T
 	C = B[np.isnan(avg_k) == False,:]
+	#Convert to real numbers if Im(x) < eps
+	C = np.real_if_close(C)
+
+	return(C)
+
+#Divide out the power spectrum from a grid
+def whiten_grid(grid, N, L, z, mask):
+	#Compute the power spectrum
+	C = compute_PS(grid, N, L, z, mask)
+
+	#Half the grid length rounded down
+	Nhalf = int(N/2)
+
+	#Calculate the wavevectors
+	dk = 2*np.pi / L
+	modes = np.arange(N)
+	modes[modes > N/2] -= N
+	kx = modes * dk
+	ky = modes * dk
+	kz = modes[:Nhalf+1] * dk
+
+	#Calculate the N*N*(N/2+1) grid of wavenumbers
+	KX,KY,KZ = np.meshgrid(kx,ky,kz)
+	K2 = KX**2 + KY**2 + KZ**2
+	k_cube = np.sqrt(K2)
+
+	#Make a grid with the spherically averaged amplitude at each mode
+	amplitude = np.sqrt(np.interp(k_cube.flatten(), C[:,0], C[:,2]))
+	amplitude = amplitude.reshape((N,N,-1))
+
+	#Make a copy of the grid so as not to destroy the input
+	grid_cp = grid * 1.0
+
+	#Fourier transform the grid
+	fgrid = np.fft.rfftn(grid_cp)
+
+	#Divide out the (square root of the) power spectrum
+	fgrid_out = np.zeros_like(fgrid)
+	nonzero = np.abs(amplitude) > 0
+	fgrid_out[nonzero] = fgrid[nonzero] / amplitude[nonzero]
+
+	return(fgrid_out)
+
+#Compute the power spectrum and store it as a text file
+def export_PS(grid, N, L, fname, z, mask):
+	#Compute the power spectrum
+	C = compute_PS(grid, N, L, z, mask)
 
 	#Store the power spectrum data
 	headr = """Power spectrum for brightness temperature at z=""" + str(z) + """
@@ -290,9 +341,10 @@ for j in range(slices):
 	#The starting, ending, and central redshifts of this cube
 	z_begin = z[index_begin];
 	z_end = z[index_end];
+	z_central = (z_begin+z_end)/2;
 	log_z_begin = np.log(z_begin)
 	log_z_end = np.log(z_end)
-	z_central = (z_begin+z_end)/2;
+	log_z_central = np.log(z_central);
 
 	#Find redshifts from the telescope data vector near z_begin and z_end
 	z_near_begin = zvec[zvec <= z_begin].max()
@@ -314,7 +366,7 @@ for j in range(slices):
 
 	#Compute and store the power spectrum
 	PS_fname = generate_fname(outdir, "PS", model, rank, seed, j, "noiseless", ".dat")
-	export_PS(signal, N, L, PS_fname, z_central)
+	export_PS(signal, N, L, PS_fname, z_central, np.ones((N, N, Nhalf+1)))
 
 	#Fourier transform the signal
 	fsignal = np.fft.rfftn(signal)
@@ -337,6 +389,11 @@ for j in range(slices):
 		#Apply the cutoffs
 		noise_cube_begin[noise_cube_begin * noise_lvl > noise_cutoff_begin] = 0
 		noise_cube_end[noise_cube_end * noise_lvl > noise_cutoff_end] = 0
+
+		#Compute the noise cube at the central redshift (only used as mask for
+		# the power spectrum calculation)
+		u = (log_z_central - log_z_near_begin) / (log_z_near_end - log_z_near_begin);
+		PS_mask = noise_cube_begin + u * (noise_cube_end - noise_cube_begin);
 
 		#Apply the power spectra
 		fgrf_begin = fgrf * np.sqrt(noise_cube_begin)
@@ -387,9 +444,7 @@ for j in range(slices):
 		ftotal = np.fft.rfftn(total)
 
 		#Also compute a whitened version of the grid
-		ftotal_white = np.zeros_like(ftotal)
-		nonzero = np.abs(ftotal) > 0
-		ftotal_white[nonzero] = ftotal[nonzero] / np.abs(ftotal[nonzero])
+		ftotal_white = whiten_grid(total, N, L, z_central, PS_mask)
 
 		#And apply a Gaussian filter with smoothing radius R
 		delta_nu = 240.0 / 1e6 # GHz
@@ -437,5 +492,9 @@ for j in range(slices):
 
 		#Store the power spectrum data
 		PS_fname = generate_fname(outdir, "PS", model, rank, seed, j, nsigstr, ".dat")
-		export_PS(total, N, L, PS_fname, z_central)
+		export_PS(total, N, L, PS_fname, z_central, PS_mask)
+
+		#Store the power spectrum data for the white grid
+		PS_white_fname = generate_fname(outdir, "PS_white", model, rank, seed, j, nsigstr, ".dat")
+		export_PS(total_white, N, L, PS_white_fname, z_central, PS_mask)
 		print("Done with power spectrum for slice ", j, " and noise level ", noise_lvl);
